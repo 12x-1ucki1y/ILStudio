@@ -32,7 +32,7 @@ class LiberoEnv(MetaEnv):
         self.config = config
         self.ctrl_space = getattr(self.config, 'ctrl_space', 'ee')
         self.ctrl_type = getattr(self.config, 'ctrl_type', 'delta')
-        self.camera_ids = getattr(self.config, 'camera_ids', [0, 1])
+        self.camera_ids = getattr(self.config, 'camera_ids', [0,])
         env = self.create_env()
         super().__init__(env)
         
@@ -75,8 +75,7 @@ class LiberoEnv(MetaEnv):
         return actions
         
     def obs2meta(self, obs):
-        gpos = obs['robot0_gripper_qpos']
-        gripper_state = np.array([gpos[0]-gpos[1]]) # (1,) without normalization
+        gripper_state = obs['robot0_gripper_qpos'] # (2,) 
         xyz = obs['robot0_eef_pos'] # (3,)
         euler = quat2axisangle(obs['robot0_eef_quat']) # (3,)
         state_ee = np.concatenate([xyz, euler, gripper_state], axis=0).astype(np.float32)

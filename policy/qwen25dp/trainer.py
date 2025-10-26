@@ -12,8 +12,12 @@ from transformers import Trainer
 from transformers.trainer import (
     get_parameter_names,
     has_length,
-    ALL_LAYERNORM_LAYERS,
 )
+try:
+    from transformers.trainer import ALL_LAYERNORM_LAYERS
+except ImportError:
+    from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
+    
 from policy.trainer import BaseTrainer
 
 # Ignore duplicate UserWarnings, only show specific warnings once

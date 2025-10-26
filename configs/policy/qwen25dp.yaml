@@ -5,9 +5,9 @@ model_class: QwenVLForPolicy
 pretrained_config:
   is_pretrained: false
 model_args:
-  vlm_model_name_or_path: "Qwen/Qwen2.5-VL-3B-Instruct"
-  policy_action_dim: 14
-  policy_state_dim: 14
+  vlm_model_name_or_path: "/inspire/hdd/project/robot-action/public/models/models--Qwen--Qwen2.5-VL-3B-Instruct/snapshots/66285546d2b821cf421d4f5eb2576359d3770cd3"
+  policy_action_dim: 7
+  policy_state_dim: 8
   policy_prediction_horizon: 100
   lora_enable: true
   lora_r: 16

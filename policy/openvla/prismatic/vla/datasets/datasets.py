@@ -8,7 +8,8 @@ format to OpenVLA, IterableDataset shim.
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Tuple, Type
-
+import torch.distributed as dist
+from torch.utils.data import get_worker_info
 import numpy as np
 import torch
 from PIL import Image
@@ -68,6 +69,124 @@ class RLDSBatchTransform:
 
 
 class RLDSDataset(IterableDataset):
+    def __init__(
+        self,
+        data_root_dir: Path,
+        data_mix: str,
+        batch_transform: RLDSBatchTransform,
+        resize_resolution: Tuple[int, int],
+        shuffle_buffer_size: int = 256_000,
+        train: bool = True,
+        image_aug: bool = False,
+        chunk_size: int = 16,
+        load_proprio: bool=True,
+        load_depth: bool=False,
+        camera_names: Tuple[str] = ('primary',),
+    ) -> None:
+        """Lightweight wrapper around RLDS TFDS Pipeline for use with PyTorch/OpenVLA Data Loaders."""
+        self.data_root_dir, self.data_mix, self.batch_transform = data_root_dir, data_mix, batch_transform
+
+        # Configure RLDS Dataset(s)
+        if self.data_mix in OXE_NAMED_MIXTURES:
+            mixture_spec = OXE_NAMED_MIXTURES[self.data_mix]
+        else:
+            # Assume that passed "mixture" name is actually a single dataset -- create single-dataset "mix"
+            mixture_spec = [(self.data_mix, 1.0)]
+
+        # fmt: off
+        per_dataset_kwargs, weights = get_oxe_dataset_kwargs_and_weights(
+            self.data_root_dir,
+            mixture_spec,
+            load_camera_views=camera_names,
+            load_depth=load_depth,
+            load_proprio=load_proprio,
+            load_language=True,
+            action_proprio_normalization_type=NormalizationType.BOUNDS_Q99,
+        )
+        rlds_config = dict(
+            traj_transform_kwargs=dict(
+                window_size=1,                                      # If we wanted to feed / predict more than one step
+                future_action_window_size=chunk_size-1,                        # For action chunking
+                skip_unlabeled=True,                                # Skip trajectories without language labels
+                goal_relabeling_strategy="uniform",                 # Goals are currently unused
+            ),
+            frame_transform_kwargs=dict(
+                resize_size=resize_resolution,
+                num_parallel_calls=16,                          # For CPU-intensive ops (decoding, resizing, etc.)
+            ),
+            dataset_kwargs_list=per_dataset_kwargs,
+            shuffle_buffer_size=shuffle_buffer_size,
+            sample_weights=weights,
+            balance_weights=True,
+            traj_transform_threads=len(mixture_spec),
+            traj_read_threads=len(mixture_spec),
+            train=train,
+        )
+
+        # If applicable, enable image augmentations
+        if image_aug:
+            rlds_config["frame_transform_kwargs"].update({"image_augment_kwargs" : dict(
+                random_resized_crop=dict(scale=[0.9, 0.9], ratio=[1.0, 1.0]),
+                random_brightness=[0.2],
+                random_contrast=[0.8, 1.2],
+                random_saturation=[0.8, 1.2],
+                random_hue=[0.05],
+                augment_order=[
+                    "random_resized_crop",
+                    "random_brightness",
+                    "random_contrast",
+                    "random_saturation",
+                    "random_hue",
+                ],
+            )}),
+
+        # Initialize RLDS Dataset
+        self.rlds_config = rlds_config 
+        self.train = train 
+        self.dataset, self.dataset_length, self.dataset_statistics = self.make_dataset(self.rlds_config, is_temp=True)
+        
+    def make_dataset(self, rlds_config, is_temp=False):
+        if is_temp:
+            config = rlds_config.copy()
+            config['train'] = False 
+            config['shuffle_buffer_size'] = 0
+            return make_interleaved_dataset(**config)
+        return make_interleaved_dataset(**rlds_config)
+
+    def __iter__(self) -> Dict[str, Any]:
+        yield from self.dataset.as_numpy_iterator()
+    
+    # def __iter__(self) -> Dict[str, Any]:
+    #     worker_info = get_worker_info()
+    #     if worker_info is None:
+    #         num_workers = 1
+    #         worker_id = 0
+    #     else:
+    #         num_workers = worker_info.num_workers
+    #         worker_id = worker_info.id
+    #     if dist.is_available() and dist.is_initialized():
+    #         rank = dist.get_rank()
+    #         world_size = dist.get_world_size()
+    #     else:
+    #         rank = 0
+    #         world_size = 1
+    #     global_num_shards = world_size * num_workers
+    #     global_shard_id = rank * num_workers + worker_id
+        
+    #     dataset, _, _ = self.make_dataset(self.rlds_config)
+        
+    #     dataset = dataset.shard(global_num_shards, global_shard_id)
+    #     # dataset = dataset.shuffle(shuffle_buffer_size)
+    #     dataset = dataset.batch(batch_size)
+    #     # Note =>> Seems to reduce memory usage without affecting speed?
+    #     dataset = dataset.with_ram_budget(1)
+    #     yield from dataset.as_numpy_iterator()
+
+    def __len__(self) -> int:
+        return self.dataset_length
+
+
+class RLDSDatasetOld(IterableDataset):
     def __init__(
         self,
         data_root_dir: Path,

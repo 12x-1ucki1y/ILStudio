@@ -235,3 +235,40 @@ def wrap_dataset_with_normalizers(
         )
         return dataset
 
+class WrappedDataset(Dataset):
+    """Wrapper for map-style datasets"""
+    def __init__(self, dataset, processor=None):
+        self.dataset = dataset
+        self.processor = processor
+
+    def __len__(self):
+        return len(self.dataset)
+    
+    def __getitem__(self, index):
+        sample = self.dataset[index]
+        return sample if self.processor is None else self.processor(sample)
+
+
+class WrappedIterableDataset(IterableDataset):
+    """Wrapper for iterable datasets with processor support"""
+    def __init__(self, dataset, processor=None):
+        super().__init__()
+        self.dataset = dataset
+        self.processor = processor
+    
+    def __iter__(self):
+        for sample in self.dataset:
+            if self.processor is not None:
+                sample = self.processor(sample)
+            yield sample
+
+
+class MapToIterableDataset(IterableDataset):
+    """Convert a map-style dataset to an iterable dataset with optional shuffling"""
+    def __init__(self, dataset,*args, **kwargs):
+        super().__init__()
+        self.dataset = dataset
+    
+    def __iter__(self):
+        for idx in range(len(self.dataset)):
+            yield self.dataset[idx]
