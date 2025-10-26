@@ -18,8 +18,11 @@
                 "HF_ENDPOINT": "https://hf-mirror.com",
             },
             "args": [
-                "-t", "libero_object", "-p", "qwen25dp", "-c", "qwen25sp", "-o", "ckpt/qwen25sp5"
+                "-p", "smolvla_libero", "-t", "libero_object", "-c", "default", "-o", "ckpt/smolvla_libero"
             ],
+            // "args": [
+            //     "-t", "libero_object", "-p", "qwen25dp", "-c", "qwen25sp", "-o", "ckpt/qwen25sp5"
+            // ],
             // "args": [
             //     "-e", "libero_object_0", "-m", "ckpt/act_debug_libero/checkpoint-30000", "--use_spawn", "-o", "results/act_asdwdj"
             // ],

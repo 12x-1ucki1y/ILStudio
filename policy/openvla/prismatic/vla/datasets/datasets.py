@@ -143,48 +143,22 @@ class RLDSDataset(IterableDataset):
         # Initialize RLDS Dataset
         self.rlds_config = rlds_config 
         self.train = train 
-        self.dataset, self.dataset_length, self.dataset_statistics = self.make_dataset(self.rlds_config, is_temp=True)
         
-    def make_dataset(self, rlds_config, is_temp=False):
-        if is_temp:
-            config = rlds_config.copy()
-            config['train'] = False 
-            config['shuffle_buffer_size'] = 0
-            return make_interleaved_dataset(**config)
+        self.dataset, self.dataset_length, self.dataset_statistics = self.make_dataset(rlds_config)
+
+    def make_dataset(self, rlds_config):
         return make_interleaved_dataset(**rlds_config)
 
     def __iter__(self) -> Dict[str, Any]:
-        yield from self.dataset.as_numpy_iterator()
-    
-    # def __iter__(self) -> Dict[str, Any]:
-    #     worker_info = get_worker_info()
-    #     if worker_info is None:
-    #         num_workers = 1
-    #         worker_id = 0
-    #     else:
-    #         num_workers = worker_info.num_workers
-    #         worker_id = worker_info.id
-    #     if dist.is_available() and dist.is_initialized():
-    #         rank = dist.get_rank()
-    #         world_size = dist.get_world_size()
-    #     else:
-    #         rank = 0
-    #         world_size = 1
-    #     global_num_shards = world_size * num_workers
-    #     global_shard_id = rank * num_workers + worker_id
-        
-    #     dataset, _, _ = self.make_dataset(self.rlds_config)
-        
-    #     dataset = dataset.shard(global_num_shards, global_shard_id)
-    #     # dataset = dataset.shuffle(shuffle_buffer_size)
-    #     dataset = dataset.batch(batch_size)
-    #     # Note =>> Seems to reduce memory usage without affecting speed?
-    #     dataset = dataset.with_ram_budget(1)
-    #     yield from dataset.as_numpy_iterator()
+        for rlds_batch in self.dataset.as_numpy_iterator():
+            yield self.batch_transform(rlds_batch)
 
     def __len__(self) -> int:
         return self.dataset_length
 
+    # === Explicitly Unused ===
+    def __getitem__(self, idx: int) -> None:
+        raise NotImplementedError("IterableDataset does not implement map-style __getitem__; see __iter__ instead!")
 
 class RLDSDatasetOld(IterableDataset):
     def __init__(

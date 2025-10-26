@@ -18,6 +18,7 @@ class WrappedRLDSDataset(IterableDataset):
             data_root_dir=dataset_dir,
             data_mix=data_mix,
             batch_transform=f,
+            chunk_size=chunk_size,
             resize_resolution=image_size,
             load_proprio=use_state,
             load_depth=use_depth,
@@ -27,7 +28,7 @@ class WrappedRLDSDataset(IterableDataset):
         self.dataset = self.rlds_dataset.dataset
     
     def __iter__(self):
-        for data in self.dataset:
+        for data in self.dataset.as_numpy_iterator():
             data_dict = dict(
                 raw_lang=data["task"]["language_instruction"].decode(),
                 action=torch.from_numpy(data["action"]),
@@ -49,8 +50,8 @@ class WrappedRLDSDataset(IterableDataset):
         return stats
     
 if __name__=='__main__':
-    # dataset = WrappedRLDSDataset('/inspire/hdd/global_public/public_datas/Robotics_Related/Open-X-Embodiment/openx/', data_mix='bc_z', image_size=(256, 256))
-    # d = next(iter(dataset))
-    dataset = WrappedRLDSDataset('/inspire/hdd/project/robot-action/public/data/libero/openvla', data_mix="libero_object_no_noops", image_size=(256, 256))
+    dataset = WrappedRLDSDataset('/inspire/hdd/global_public/public_datas/Robotics_Related/Open-X-Embodiment/openx/', data_mix='bc_z', image_size=(256, 256))
     d = next(iter(dataset))
+    # dataset = WrappedRLDSDataset('/inspire/hdd/project/robot-action/public/data/libero/openvla', data_mix="libero_object_no_noops", image_size=(256, 256))
+    # d = next(iter(dataset))
     print('ok')

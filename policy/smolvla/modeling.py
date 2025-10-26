@@ -47,6 +47,7 @@ class SmolVLAPolicyConfig(PretrainedConfig):
             expert_width_multiplier: float = 0.75,
             min_period: float = 4e-3,
             max_period: float = 4.0,
+            device: str = 'cuda',
             **kwargs
         ):
         super().__init__(**kwargs)
@@ -80,6 +81,7 @@ class SmolVLAPolicyConfig(PretrainedConfig):
         self.expert_width_multiplier = expert_width_multiplier
         self.min_period = min_period
         self.max_period = max_period    
+        self.device = device
 
 
 class SmolVLAPolicy(PreTrainedModel):

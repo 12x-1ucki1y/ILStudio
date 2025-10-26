@@ -162,7 +162,7 @@ def make_dataset_from_rlds(
                         if key is None
                         else tf.cast(old_obs[key], tf.float32)
                     )
-                    for key in state_obs_keys if "trinsics" not in key 
+                    for key in state_obs_keys if key is None or 'trinstic' not in key
                     # for key in state_obs_keys
                 ],
                 axis=1,
@@ -574,7 +574,7 @@ def make_interleaved_dataset(
 
     # Shuffle the Dataset
     #   =>> IMPORTANT :: Shuffle AFTER .cache(), or else memory will still leak!
-    # dataset = dataset.shuffle(shuffle_buffer_size)
+    dataset = dataset.shuffle(shuffle_buffer_size)
 
     # Apply Frame Transforms
     overwatch.info("Applying frame transforms on dataset...")

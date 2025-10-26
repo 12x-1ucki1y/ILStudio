@@ -16,7 +16,7 @@ try:
 except ImportError:
     TORCHDATA_AVAILABLE = False
     warnings.warn("torchdata not available. Multi-dataset mixing will not be supported.")
-from .datasets.rlds_wrapper import WrappedRLDSDataset
+
 
 
 def is_distributed():
@@ -76,7 +76,7 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
     """Create DataLoader for a single dataset (map-style or iterable)"""
     # Identify the type of the dataset: iter or map
     is_iter_dataset = hasattr(dataset, '__iter__') and (not hasattr(dataset, '__len__') or not hasattr(dataset, '__getitem__'))
-    
+    from .datasets.rlds_wrapper import WrappedRLDSDataset
     if not is_iter_dataset:
         # Map-style dataset
         if hasattr(dataset, '__len__'):
@@ -113,10 +113,8 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
         loader = DataLoader(
             wrapped_data,  
             batch_size=batch_size,
-            num_workers=args.dataloader_num_workers,
+            num_workers=0,
             collate_fn=collator,
-            pin_memory=args.dataloader_pin_memory,
-            persistent_workers=args.dataloader_num_workers > 0,
             drop_last=True,
         )
         if is_training:
