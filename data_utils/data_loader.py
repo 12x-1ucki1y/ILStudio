@@ -228,13 +228,16 @@ def is_rlds_data(ds):
         return False
     return isinstance(ds, WrappedRLDSDataset) or isinstance(ds, DroidDataset) or isinstance(ds, VLAOSDataset)
 
+def is_map_data(dataset):
+    return hasattr(dataset, '__len__') and hasattr(dataset, '__getitem__')
+
+def is_iter_data(dataset):
+    return hasattr(dataset, '__iter__') and (not hasattr(dataset, '__len__') or not hasattr(dataset, '__getitem__'))
+
 def _create_single_dataloader(dataset, processor, collator, args, is_training=True):
     """Create DataLoader for a single dataset (map-style or iterable)"""
     # Identify the type of the dataset: iter or map
-    is_map_dataset = hasattr(dataset, '__len__') and hasattr(dataset, '__getitem__')
-    is_iter_dataset = hasattr(dataset, '__iter__') and (not hasattr(dataset, '__len__') or not hasattr(dataset, '__getitem__'))
-    
-    if is_map_dataset:
+    if is_map_data(dataset):
         wrapped_data = WrappedDataset(dataset, processor)
         sampler = DistributedSampler(wrapped_data) if is_training and is_distributed() else None
         loader = DataLoader(
@@ -250,11 +253,7 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
             prefetch_factor=2,
         )
         loader = BackgroundPrefetcher(loader)
-        if is_training:
-            return loader, None
-        else:
-            return loader
-    elif is_iter_dataset:
+    elif is_iter_data(dataset):
         if is_rlds_data(dataset.dataset):
             # RLDS dataset
             wrapped_data = WrappedIterableDataset(dataset, processor)
@@ -266,10 +265,6 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
                 collate_fn=collator,
                 drop_last=True,
             )
-            if is_training:
-                return loader, None
-            else:
-                return loader
         else:
             # Pytorch Iterable dataset
             # Wrap iterable dataset with processor
@@ -291,27 +286,13 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
                 # persistent_workers=args.dataloader_num_workers>0,
                 drop_last=True,
             )
-            if is_training:
-                return loader, None
-            else:
-                return loader
     else:
         raise ValueError("Dataset must be either map-style or iterable.")
+    return loader, None if is_training else loader
 
 def _create_mixed_dataloader(datasets, processor, collator, args, is_training=True):
     """
     Create DataLoader for multiple datasets using torchdata pipeline.
-    
-    Pipeline structure:
-    1. Wrap/Convert each dataset to iterable
-    2. Apply processor to each dataset
-    3. Wrap as IterableWrapper (torchdata pipeline)
-    4. Apply Cycle to prevent exhaustion
-    5. Apply ShardingFilter for distributed training
-    6. Apply Shuffler for randomization
-    7. Apply Batcher (if collator expects unbatched data)
-    8. Apply Prefetcher for performance
-    9. Create DataLoader
     
     Args:
         datasets: List of datasets (can be map-style or iterable)
@@ -323,79 +304,42 @@ def _create_mixed_dataloader(datasets, processor, collator, args, is_training=Tr
     Returns:
         DataLoader with mixed pipeline
     """
-    print(f"Building mixed dataset pipeline:")
-    
-    # Step 1: Convert all datasets to iterable with processor applied
-    iterable_datasets = []
-    for i, dataset in enumerate(datasets):
-        is_iter = hasattr(dataset, '__iter__') and (not hasattr(dataset, '__len__') or not hasattr(dataset, '__getitem__'))
-        
-        if is_iter:
-            # Already iterable
-            print(f"  Dataset {i}: Iterable dataset")
-            wrapped = WrappedIterableDataset(dataset, processor)
+    # Create DataLoader for MapStyleDataset, IterableDataset, and RLDSDataset, respectively
+    all_map_datasets, all_iter_datasets, all_rlds_datasets = [], [], []
+    for data in datasets:
+        if is_map_data(data): all_map_datasets.append(data)
+        elif is_iter_data(data):
+            if is_rlds_data(data):
+                all_rlds_datasets.append(data)
+            else:
+                all_iter_datasets.append(data)
         else:
-            # Map-style: convert to iterable
-            print(f"  Dataset {i}: Map-style dataset (size={len(dataset)}) -> converting to iterable")
-            # First apply processor via WrappedDataset
-            wrapped_map = WrappedDataset(dataset, processor)
-            # Then convert to iterable
-            wrapped = MapToIterableDataset(wrapped_map, shuffle=is_training, seed=args.seed if hasattr(args, 'seed') else None)
-        
-        iterable_datasets.append(wrapped)
-    
-    # Step 2: Create torchdata pipelines for each dataset
-    print(f"Creating torchdata pipelines:")
-    pipelines = []
-    for i, dataset in enumerate(iterable_datasets):
-        # Wrap as IterableWrapper
-        pipe = IterableWrapper(dataset, deepcopy=False)
-        
-        # Apply Cycle to prevent exhaustion
-        pipe = pipe.cycle()
-        print(f"  Pipeline {i}: IterableWrapper -> Cycle")
-        
-        pipelines.append(pipe)
-    
-    # Step 3: Multiplex (mix) all pipelines
-    # Use round-robin sampling from each pipeline
-    print(f"Multiplexing {len(pipelines)} pipelines")
-    mixed_pipe = Multiplexer(*pipelines)
-    
-    # Step 4: Apply ShardingFilter for distributed training
-    # print(f"Applying ShardingFilter for distributed training")
-    mixed_pipe = mixed_pipe.sharding_filter()
-    
-    # Step 5: Apply Shuffler for randomization (if training)
-    # if is_training:
-    buffer_size = getattr(args, 'shuffle_buffer_size', 1000)
-    # print(f"Applying Shuffler with buffer_size={buffer_size}")
-    mixed_pipe = mixed_pipe.shuffle(buffer_size=buffer_size)
-    
-    # Step 6: Batching is handled by DataLoader's batch_size parameter
-    # We don't use Batcher here because collator might need custom logic
-    batch_size = args.per_device_train_batch_size if is_training else args.per_device_eval_batch_size
-    # mixed_pipe = mixed_pipe.batch(
-    #     batch_size=batch_size, 
-    #     drop_last=is_training
-    # )
-    # mixed_pipe = mixed_pipe.collate(collate_fn=collator)
-    
-    # Step 7: Apply Prefetcher for performance
-    prefetch_size = getattr(args, 'prefetch_size', 10)
-    print(f"Applying Prefetcher with buffer_size={prefetch_size}")
-    mixed_pipe = mixed_pipe.prefetch(buffer_size=prefetch_size)
-    
-    # Step 8: Create DataLoader
-    print(f"Creating DataLoader with batch_size={args.per_device_train_batch_size}")
-    loader = DataLoader(
-        mixed_pipe,
-        batch_size=batch_size,  # **职责划分**: Batching 已在 pipeline 中完成
-        num_workers=args.dataloader_num_workers,
-        collate_fn=collator, # **职责划分**: Collate 已在 pipeline 中完成
-        pin_memory=args.dataloader_pin_memory,
-        persistent_workers=True,
-    )
-    
-    return loader
+            raise TypeError("Dataset must be either map-style or iterable.")
+    # Mix map-style datasets using ConcatDataset
+    if len(all_map_datasets)>0:
+        mixed_map_data = torch.utils.data.ConcatDataset(all_map_datasets)
+        map_loader = _create_single_dataloader(dataset, processor, collator, args, is_training=is_training)
+    else:
+        map_loader = None
+    # mix iterable datasets using huggingface's datasets
+    if len(all_iter_datasets)>0:
+        from datasets import interleave_datasets
+        mixed_iter_data = interleave_datasets(all_iter_datasets
+        )
+        iter_loader = _create_single_dataloader(mixed_iter_data, processor, collator, args, is_training=is_training)
+    else:
+        iter_loader = None
+    # mix rlds datasets using tf.data
+    if len(all_rlds_datasets)>0:
+        import dlimp as dl
+        mixed_rlds_data = dl.DLataset.sample_from_datasets([ds.dataset for ds in all_rlds_datasets])
+        rlds_loader = _create_single_dataloader(mixed_rlds_data, processor, collator, args, is_training=is_training)
+    else:
+        rlds_loader = None
+    # Combine all loaders using SampleMultiplexer    
+    if rlds_loader is None and iter_loader is None: return map_loader
+    elif map_loader is None and rlds_loader is None: return iter_loader
+    elif map_loader is None and iter_loader is None: return rlds_loader
+    else:
+        raise NotImplementedError("Mixing map-style, iterable, and RLDS datasets is not yet implemented.")
     
