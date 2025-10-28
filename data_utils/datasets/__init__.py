@@ -9,7 +9,7 @@ from .base import EpisodicDataset
 from .aloha_sim import AlohaSimDataset
 from .aloha_sii import AlohaSIIDataset
 from .aloha_sii_v2 import AlohaSIIv2Dataset
-from .robomimic import RobomimicDataset
+from .robomimic_dataset import RobomimicDataset
 from .koch_dataset import KochDataset
 from .d4rl import D4RLDataset
 from .lerobot_wrapper import WrappedLerobotDataset

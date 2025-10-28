@@ -7,9 +7,9 @@
 [submodule "benchmark/robotwin/RoboTwin"]
 	path = benchmark/robotwin/RoboTwin
 	url = https://github.com/robotwin-Platform/RoboTwin.git
-[submodule "third_party/lerobot"]
-	path = third_party/lerobot
-	url = git@github.com:WwZzz/IL-Studio.git
 [submodule "third_party/libero"]
 	path = third_party/libero
 	url = https://github.com/Lifelong-Robot-Learning/LIBERO.git
+[submodule "third_party/lerobot"]
+	path = third_party/lerobot
+	url = https://github.com/huggingface/lerobot.git

@@ -7,7 +7,7 @@ GIT_LFS_SKIP_SMUDGE=1 uv sync
 GIT_LFS_SKIP_SMUDGE=1 uv pip install -e .
 cd ../../..
 source policy/openpi/openpi/.venv/bin/activate
-uv pip install peft tensorflow==2.18.0 tf-keras tensorflow_datasets tianshou==0.2.0 robosuite==1.4.0
+uv pip install peft tensorflow==2.18.0 tf-keras tensorflow_datasets tianshou==0.2.0 robosuite==1.4.0 rich timm>=0.9.10 draccus tensorflow_graphics
 ```
 
 

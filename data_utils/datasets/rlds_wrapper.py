@@ -1,6 +1,10 @@
 from policy.openvla.prismatic.vla.datasets.datasets import RLDSDataset
 from torch.utils.data import IterableDataset
 import torch
+
+def f(x):
+    return x
+
 class WrappedRLDSDataset(IterableDataset):
     def __init__(self, dataset_dir:str, data_mix, image_size=(256, 256), chunk_size=16, ctrl_type='delta', ctrl_space='ee', use_state=True, use_depth=False, shuffle_buffer_size: int=10, *args, **kwargs):
         super().__init__()
@@ -10,19 +14,21 @@ class WrappedRLDSDataset(IterableDataset):
         self.dataset_dir = dataset_dir
         if not isinstance(image_size, tuple): image_size = tuple(image_size)
         self.data_mix = data_mix
-        self.dataset = RLDSDataset(
+        self.rlds_dataset = RLDSDataset(
             data_root_dir=dataset_dir,
             data_mix=data_mix,
-            batch_transform=lambda x: x,
+            batch_transform=f,
+            chunk_size=chunk_size,
             resize_resolution=image_size,
             load_proprio=use_state,
             load_depth=use_depth,
             *args,
             **kwargs
         )
+        self.dataset = self.rlds_dataset.dataset
     
     def __iter__(self):
-        for data in self.dataset:
+        for data in self.dataset.as_numpy_iterator():
             data_dict = dict(
                 raw_lang=data["task"]["language_instruction"].decode(),
                 action=torch.from_numpy(data["action"]),
@@ -39,13 +45,13 @@ class WrappedRLDSDataset(IterableDataset):
     def get_dataset_statistics(self, keyname=None):
         if keyname is None:
             keyname = self.data_mix
-        stats = self.dataset.dataset_statistics[keyname]
+        stats = self.rlds_dataset.dataset_statistics[keyname]
         stats['state'] = stats['proprio']
         return stats
     
 if __name__=='__main__':
-    # dataset = WrappedRLDSDataset('/inspire/hdd/global_public/public_datas/Robotics_Related/Open-X-Embodiment/openx/', data_mix='bc_z', image_size=(256, 256))
-    # d = next(iter(dataset))
-    dataset = WrappedRLDSDataset('/inspire/hdd/project/robot-action/public/data/libero/openvla', data_mix="libero_object_no_noops", image_size=(256, 256))
+    dataset = WrappedRLDSDataset('/inspire/hdd/global_public/public_datas/Robotics_Related/Open-X-Embodiment/openx/', data_mix='bc_z', image_size=(256, 256))
     d = next(iter(dataset))
+    # dataset = WrappedRLDSDataset('/inspire/hdd/project/robot-action/public/data/libero/openvla', data_mix="libero_object_no_noops", image_size=(256, 256))
+    # d = next(iter(dataset))
     print('ok')

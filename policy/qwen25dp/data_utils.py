@@ -88,7 +88,7 @@ class QwenVLAProcess:
             return_tensors="pt",
         )
         input_labels = torch.ones_like(model_inputs['input_ids']) * (-100)
-        answer = sample['reasoning']+ '<|im_end|>' if 'reasoning' in sample else '<|im_end|>'
+        answer = '<|im_end|>'
         # answer = sample['reasoning']
         # Start processing output part
         # Tokenize label text, convert to vocabulary id

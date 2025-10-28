@@ -4,25 +4,18 @@ import torch.nn.functional as F  # noqa: N812
 
 
 class SmolVLAProcess:
-    def __init__(self, tokenizer, max_length=512, padding_side="right", padding="max_length", truncation=True):
-        self.tokenizer = tokenizer
-        self.max_length = max_length
-        self.padding_side = padding_side
-        self.padding = padding
-        self.truncation = truncation
-
     def __call__(self, sample):
         # process language
         if not sample['raw_lang'].endswith("\n"):
             sample['raw_lang'] = sample['raw_lang'] + "\n"
-        tokenized_prompt = self.tokenizer(
-            sample['raw_lang'],
-            max_length=self.max_length,
-            truncation=self.truncation,
-            padding=self.padding,
-            padding_side=self.padding_side,
-            return_tensors="pt",
-        )
+        # tokenized_prompt = self.tokenizer(
+        #     sample['raw_lang'],
+        #     max_length=self.max_length,
+        #     truncation=self.truncation,
+        #     padding=self.padding,
+        #     padding_side=self.padding_side,
+        #     return_tensors="pt",
+        # )
         if isinstance(sample['image'], np.ndarray):
             image_data = sample['image'].astype(np.float32) / 255.0 # k,c,h,w
         else:
@@ -33,18 +26,24 @@ class SmolVLAProcess:
         data_dict['action'] = sample.get('action', None)
         data_dict['is_pad'] = sample.get('is_pad', None)
         data_dict['image'] = image_data
-        for k, v in tokenized_prompt.items():
-            data_dict[k] = v
+        data_dict['raw_lang'] = sample['raw_lang']
+        # for k, v in tokenized_prompt.items():
+        #     data_dict[k] = v
         for k, v in data_dict.items():
             if isinstance(v, np.ndarray):
                 data_dict[k] = torch.from_numpy(v)
         return data_dict
 
 class SmolVLADataCollator:
-    def __init__(self, max_state_dim:int=32, max_action_dim:int=32, resize_imgs_with_padding:tuple[int, int]=(512, 512)):
+    def __init__(self, tokenizer, max_state_dim:int=32, max_action_dim:int=32, resize_imgs_with_padding:tuple[int, int]=(512, 512), max_length=512, padding_side="right", padding="max_length", truncation=True):
         self.max_state_dim = max_state_dim
         self.max_action_dim = max_action_dim
         self.resize_imgs_with_padding = resize_imgs_with_padding
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.padding_side = padding_side
+        self.padding = padding
+        self.truncation = truncation
 
     def pad_vector(self,vector, new_dim):
         """Can be (batch_size x sequence_length x features_dimension)
@@ -105,8 +104,16 @@ class SmolVLADataCollator:
         images = [self.resize_with_pad(img, self.resize_imgs_with_padding[0], self.resize_imgs_with_padding[1], pad_value=0) for img in images]
         images = [img * 2.0 - 1.0 for img in images]
         img_masks = [torch.ones(bs, dtype=torch.bool) for _ in range(num_images)]
-        lang_tokens = torch.cat([ins['input_ids'] for ins in instances], dim=0)
-        lang_masks = torch.cat([ins['attention_mask'] for ins in instances], dim=0).bool()
+        tokenized_prompt = self.tokenizer(
+            [ins['raw_lang'] for ins in instances],
+            max_length=self.max_length,
+            truncation=self.truncation,
+            padding=self.padding,
+            padding_side=self.padding_side,
+            return_tensors="pt",
+        )
+        lang_tokens = tokenized_prompt.input_ids
+        lang_masks = tokenized_prompt.attention_mask.bool()
         batch = dict(
             images=images,
             img_masks=img_masks,

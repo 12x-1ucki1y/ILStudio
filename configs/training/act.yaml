@@ -27,7 +27,7 @@ learning_rate: 0.0001
 weight_decay: 0.0001
 warmup_steps: 0
 warmup_ratio: 0.0
-lr_scheduler_type: "cosine"
+lr_scheduler_type: "constant"
 
 # Optimizer settings
 optim: "adamw_torch"
@@ -44,12 +44,12 @@ adam_epsilon: 1e-8
 
 # Logging settings
 logging_strategy: "steps"
-logging_steps: 10
-report_to: "tensorboard"
+logging_steps: 1000
+report_to: "none"
 
 # Saving settings
 save_strategy: "steps"
-save_steps: 1000
+save_steps: 10000
 save_total_limit: 50
 
 # =============================================================================
@@ -59,12 +59,13 @@ save_total_limit: 50
 
 # DataLoader settings
 dataloader_num_workers: 8
-dataloader_pin_memory: false
+dataloader_pin_memory: true
+dataloader_prefetch_factor: 4
 remove_unused_columns: false
 
 # Evaluation settings
 do_eval: false
-eval_steps: 200
+eval_steps: 2000
 
 # System settings
 seed: 0
@@ -76,14 +77,14 @@ seed: 0
 
 # Training duration
 num_train_epochs: 3
-max_steps: 10000
+max_steps: 1000000
 
 # Batch sizes (typically determined by hardware)
-per_device_train_batch_size: 64
+per_device_train_batch_size: 128
 per_device_eval_batch_size: 32
 
 # Logging directory (often derived from output_dir)
-logging_dir: "./logs"
+logging_dir: "./logs_act_robomimic"
 
 # Checkpoint resuming (often handled automatically)
 resume_from_checkpoint: True

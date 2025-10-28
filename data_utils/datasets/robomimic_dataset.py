@@ -8,7 +8,7 @@ import numpy as np
 import os
 from collections import OrderedDict
 from data_utils.rotate import quat2axisangle
-from .base import EpisodicDataset
+from data_utils.datasets.base import EpisodicDataset
 
 MODALITIES = {
     "obs": {
@@ -163,8 +163,8 @@ class RobomimicDataset(EpisodicDataset):
             action = np.concatenate([data['actions']] + [dataset[i]['actions'] for i in range(global_index + 1, global_index + chunk_size)], axis=0)
         else:
             action = data['actions'] if self.chunk_size == 1 else dataset.get_dataset_for_ep(ep=ep, key="actions")[start_ts:start_ts + self.chunk_size]
-        action[:, :6] = action[:, :6] * np.array([0.05, 0.05, 0.05, 0.5, 0.5, 0.5])
-        action[:, -1] = 0.5 * (1 - action[:, -1])
+        # action[:, :6] = action[:, :6] * np.array([0.05, 0.05, 0.05, 0.5, 0.5, 0.5])
+        # action[:, -1] = 0.5 * (1 - action[:, -1])
         if self.ctrl_type == 'abs':
             if dataset.hdf5_cache_mode == 'all':
                 next_data = [data] + [dataset[i] for i in range(global_index + 1, global_index + chunk_size)]
@@ -230,8 +230,8 @@ class RobomimicDataset(EpisodicDataset):
             data_dict['state'] = state
         if 'action' in feats or len(feats) == 0:  # Load action
             action = trajectory_data['actions']
-            action[:, :6] = action[:, :6] * np.array([0.05, 0.05, 0.05, 0.5, 0.5, 0.5])
-            action[:, -1] = 0.5 * (1 - action[:, -1])
+            # action[:, :6] = action[:, :6] * np.array([0.05, 0.05, 0.05, 0.5, 0.5, 0.5])
+            # action[:, -1] = 0.5 * (1 - action[:, -1])
             data_dict['action'] = action
         if 'image' in feats or len(feats) == 0:  # Load images
             image_dict = dict(
@@ -240,3 +240,9 @@ class RobomimicDataset(EpisodicDataset):
             )
             data_dict['image'] = image_dict
         return data_dict
+
+
+if __name__=='__main__':
+    ds = RobomimicDataset(['/inspire/hdd/project/robot-action/public/data/robomimic/square/ph'], ['primary'], 50, image_size=(256, 256))
+    d = next(iter(ds))
+    print('ok')

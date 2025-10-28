@@ -12,12 +12,29 @@
             "console": "integratedTerminal",
             "env": {
                 "MUJOCO_GL": "egl",
-                "CUDA_VISIBLE_DEVICES": "0",
+                // "CUDA_VISIBLE_DEVICES": "0",
                 "HF_DATASETS_CACHE": "/inspire/hdd/project/robot-action/public/data",
                 "ILSTD_CACHE": "/mnt/model/ilstd/data",
                 "HF_ENDPOINT": "https://hf-mirror.com",
             },
-            
+            "args": [//robomimic+act
+                "-t", "sim_transfer_cube_scripted", "-p", "act", "-c", "act", "-o", "ckpt/tmp_act_aloha_1"
+            ],
+            // "args": [
+            //     "-p", "smolvla_libero", "-t", "libero_object", "-c", "default", "-o", "ckpt/smolvla_libero"
+            // ],
+            // "args": [
+            //     "-t", "libero_object", "-p", "qwen25dp", "-c", "qwen25sp", "-o", "ckpt/qwen25sp5"
+            // ],
+            // "args": [
+            //     "-e", "libero_object_0", "-m", "ckpt/act_debug_libero/checkpoint-30000", "--use_spawn", "-o", "results/act_asdwdj"
+            // ],
+            // "args": [ // act + libero debug
+            //     "--policy", "act_libero",
+            //     "--task", "libero_object",
+            //     "--output_dir", "ckpt/act_libero_debug2",
+            //     "--training_config", "debug",
+            // ],
             // "args": [ // policy client
             //     "--output_dir", "results/test_act_remote","--model_name_or_path","localhost:21000", "--use_spawn",
             // ],
