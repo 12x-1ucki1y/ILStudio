@@ -89,6 +89,7 @@ import warnings
 import torch.distributed as dist
 import torch
 
+
 def is_distributed():
     return dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1
 
@@ -588,7 +589,6 @@ class BaseNormalizer:
     def denormalize(self, *args, **kwargs):
         raise NotImplementedError
     
-    
 class MinMaxNormalizer(BaseNormalizer):
     def __init__(self, dataset, dataset_name=None, low:float=-1, high:float=1, ctrl_type='delta', ctrl_space='ee', mask=None):
         super().__init__(dataset, dataset_name, ctrl_type=ctrl_type, ctrl_space=ctrl_space, mask=mask)
@@ -739,3 +739,185 @@ class Identity(BaseNormalizer):
     
     def denormalize(self, data, *args, **kwargs):
         return data
+    
+# Normalize Class
+NORMTYPE2CLASS = {
+    'minmax': MinMaxNormalizer,
+    'percentile': PercentileNormalizer, 
+    'zscore': ZScoreNormalizer,
+    'identity': Identity,
+}
+
+
+def save_norm_meta_to_json(file_path: str, data: dict):
+    """
+    Save normalization meta information to json file
+    
+    Saves complete metadata including datasets (with per-dataset ctrl_space/ctrl_type), state, and action.
+    """
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def load_normalizer_from_meta(norm_meta, src_dir='', dataset_id=None):
+    """Load normalizers from metadata
+    
+    Uses dataset_id as keys and includes per-dataset ctrl_space/ctrl_type.
+    
+    Args:
+        norm_meta: Metadata dictionary
+        src_dir: Source directory where normalize.json and stats files are located.
+                 If empty or stats not found, will fallback to cache directory.
+        dataset_id: Specific dataset_id to load. If None, loads the first dataset from metadata.
+                    Note: This is read from metadata, not from args.dataset_id.
+    
+    Returns:
+        Dictionary with 'state' and 'action' normalizers
+    """
+    datasets_info = norm_meta.get('datasets', [])
+    
+    if not datasets_info:
+        raise ValueError("No datasets found in metadata")
+    
+    # Determine which dataset to load
+    if dataset_id is None:
+        # Use first dataset as default (typical for single-dataset training)
+        dataset_meta = datasets_info[0]
+        dataset_id = dataset_meta['dataset_id']
+        if len(datasets_info) > 1:
+            print(f"Multiple datasets found in metadata. Using first: {dataset_id}")
+    else:
+        # Find the matching dataset by dataset_id
+        dataset_meta = None
+        for ds_meta in datasets_info:
+            if ds_meta['dataset_id'] == dataset_id:
+                dataset_meta = ds_meta
+                break
+        
+        if dataset_meta is None:
+            raise ValueError(f"Dataset '{dataset_id}' not found in metadata. Available: {[d['dataset_id'] for d in datasets_info]}")
+    
+    # Get ctrl info from metadata
+    ctrl_space = dataset_meta.get('ctrl_space', 'ee')
+    ctrl_type = dataset_meta.get('ctrl_type', 'delta')
+    
+    # Get mask info from metadata
+    action_norm_mask = dataset_meta.get('action_norm_mask', None)
+    state_norm_mask = dataset_meta.get('state_norm_mask', None)
+    
+    # Log mask information for transparency
+    if action_norm_mask is not None or state_norm_mask is not None:
+        print(f"Loading normalizers with mask configuration for dataset '{dataset_id}':")
+        if action_norm_mask is not None:
+            print(f"  - action_norm_mask: {action_norm_mask}")
+        if state_norm_mask is not None:
+            print(f"  - state_norm_mask: {state_norm_mask}")
+    
+    # Get normalizer types from metadata
+    state_norm_type = norm_meta['state'].get(dataset_id, 'zscore')
+    action_norm_type = norm_meta['action'].get(dataset_id, 'zscore')
+    
+    # Create normalizers with dataset_id and ctrl info
+    kwargs = {'ctrl_space': ctrl_space, 'ctrl_type': ctrl_type}
+    state_kwargs = kwargs.copy()
+    action_kwargs = kwargs.copy()
+    
+    # Add mask to kwargs if present
+    if state_norm_mask is not None:
+        state_kwargs['mask'] = state_norm_mask
+    if action_norm_mask is not None:
+        action_kwargs['mask'] = action_norm_mask
+    
+    # Determine load directory: prefer src_dir, fallback to cache
+    cache_dir = os.path.join(os.environ.get('ILSTD_CACHE', os.path.expanduser('~/.cache/ilstd')), 'normalize')
+    
+    # Check if stats exist in src_dir
+    if src_dir and os.path.exists(src_dir):
+        stats_filename = f"{dataset_id}_stats_{ctrl_space}_{ctrl_type}.pkl"
+        src_stats_path = os.path.join(src_dir, stats_filename)
+        
+        if os.path.exists(src_stats_path):
+            # Load from src_dir (checkpoint directory)
+            load_dir = src_dir
+        else:
+            # Fallback to cache
+            load_dir = cache_dir
+            warnings.warn(f"Stats not found in {src_dir}, using cache directory: {cache_dir}")
+    else:
+        # Use cache directory
+        load_dir = cache_dir
+    
+    # Create normalizers
+    state_normalizer = NORMTYPE2CLASS[state_norm_type](
+        load_dir, dataset_name=dataset_id, **state_kwargs
+    )
+    action_normalizer = NORMTYPE2CLASS[action_norm_type](
+        load_dir, dataset_name=dataset_id, **action_kwargs
+    )
+    
+    return {'state': state_normalizer, 'action': action_normalizer}
+
+
+def load_normalizers(args):
+    """Load normalizers from saved metadata
+    
+    Loads normalizers using dataset_id as key with per-dataset ctrl_space/ctrl_type.
+    
+    Args:
+        args: Arguments object with model_name_or_path and optional dataset_id
+    
+    Returns:
+        tuple: (normalizers_dict, ctrl_space, ctrl_type) or (normalizers_dict, datasets_info)
+               For new format, returns list of dataset info dicts
+    """
+    try:
+        # load normalizers
+        policy_normalize_file = os.path.join(os.path.dirname(args.model_name_or_path), 'normalize.json')
+        if not os.path.exists(policy_normalize_file):
+            policy_normalize_file = os.path.join(args.model_name_or_path, 'normalize.json')
+            if not os.path.exists(policy_normalize_file):
+                raise FileNotFoundError("No normalize.json found")
+        with open(policy_normalize_file, 'r') as f:
+            norm_meta = json.load(f)
+        
+        # Get dataset_id from args if specified, otherwise use first dataset
+        dataset_id = getattr(args, 'dataset_id', None)
+        if dataset_id == '':  # Empty string means not specified
+            dataset_id = None
+        
+        # Load normalizer from metadata
+        normalizers = load_normalizer_from_meta(
+            norm_meta, 
+            src_dir=os.path.dirname(policy_normalize_file),
+            dataset_id=dataset_id  # Will use first dataset if None
+        )
+        
+        # Get ctrl info from the specified dataset or first dataset
+        datasets_info = norm_meta.get('datasets', [])
+        if datasets_info:
+            # Find the dataset that was actually loaded
+            target_dataset = None
+            if dataset_id:
+                # Look for the specified dataset
+                for dataset in datasets_info:
+                    if dataset.get('dataset_id') == dataset_id:
+                        target_dataset = dataset
+                        break
+            
+            # If not found or no dataset_id specified, use first dataset
+            if target_dataset is None:
+                target_dataset = datasets_info[0]
+            
+            ctrl_space = target_dataset.get('ctrl_space', 'ee')
+            ctrl_type = target_dataset.get('ctrl_type', 'delta')
+            
+            print(f"   ✓ Using ctrl_space='{ctrl_space}', ctrl_type='{ctrl_type}' from dataset '{target_dataset.get('dataset_id', 'unknown')}'")
+        else:
+            ctrl_space, ctrl_type = 'ee', 'delta'
+            print(f"   ⚠ No dataset info found, using default ctrl_space='{ctrl_space}', ctrl_type='{ctrl_type}'")
+        
+        return normalizers, ctrl_space, ctrl_type
+            
+    except Exception as e:
+        warnings.warn(f"Failed to load normalizers from {args.model_name_or_path} because {e}")
+        identity_normalizer = {'state':Identity(), 'action':Identity()}
+        return identity_normalizer, 'ee', 'delta'

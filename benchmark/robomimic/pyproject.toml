@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ilstd_robomimic"
+version = "0.1.0"
+description = "A Plug-and-Play Imitation-Learning Playground for Robotics"
+readme = "README.md"
+requires-python = "==3.10.*"
+license = { text = "MIT" }
+dependencies = [
+    "torch>=2.4.0",
+    "torchvision>=0.19.0",
+    "torchaudio>=2.4.0",
+    "transformers<=4.45.2",
+    "accelerate",
+    "peft>=0.17.1",
+    "opencv-python>=4.9.0.80",
+    "rospkg==1.5.0",
+    "imageio==2.37.0",
+    "pillow>=11.3.0",
+    "tianshou==0.2.0",
+    "pytest",
+    "dm_control==1.0.14",
+    "matplotlib",
+    "robosuite==1.5.1",
+    "imageio-ffmpeg==0.6.0",
+    "pynput",
+    "numpy==1.26.4",
+    "dlimp @ git+https://github.com/kvablack/dlimp@5edaa4691567873d495633f2708982b42edf1972",
+]
+
+
+[tool.uv.sources]
+dlimp = { git = "https://github.com/kvablack/dlimp", rev = "ad72ce3a9b414db2185bc0b38461d4101a65477a" }
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.hatch.metadata]
+allow-direct-references = true

@@ -70,7 +70,7 @@ class LiberoEnv(MetaEnv):
         assert maction['ctrl_space']==self.ctrl_space, f"The ctrl_space of MetaAction {maction['ctrl_space']} doesn't match the action space of environment {self.ctrl_space}"
         assert maction['ctrl_type']==self.ctrl_type, "Action must be delta action for LIBERO"
         actions = maction['action'] # (action_dim, )
-        # actions[:6] = actions[:6]
+        actions[:6] = actions[:6]*np.array([0.5, 0.5, 0.5, 0.05, 0.05, 0.05, ])
         actions[6] = 1.-2.*actions[6]
         return actions
         

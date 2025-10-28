@@ -2,7 +2,8 @@ import os
 import argparse
 import json
 import policy.utils as ml_utils
-from data_utils.utils import set_seed, load_data, get_dataloader
+from data_utils.utils import set_seed, load_data
+from data_utils.data_loader import get_dataloader
 from configs.loader import ConfigLoader
 from policy.policy_loader import (
     get_policy_data_processor,
