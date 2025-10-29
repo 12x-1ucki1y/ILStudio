@@ -7,6 +7,7 @@ datasets:
       camera_names: ['primary']
       ctrl_space: 'ee'
       ctrl_type: 'delta'
+    action_norm_mask: [-1]
 
 episode_len: 400
 action_dim: 7

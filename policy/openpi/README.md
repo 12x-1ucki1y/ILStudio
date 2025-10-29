@@ -5,10 +5,10 @@ cd /path/to/IL-Studio
 cd policy/openpi/openpi
 GIT_LFS_SKIP_SMUDGE=1 uv sync
 GIT_LFS_SKIP_SMUDGE=1 uv pip install -e .
+uv pip install peft tensorflow tf-keras tensorflow_datasets tianshou==0.2.0 robosuite==1.4.0 rich timm>=0.9.10 draccus tensorflow_graphics dlimp@git+https://github.com/kvablack/dlimp.git@5edaa4691567873d495633f2708982b42edf1972
 cp -r ./src/openpi/models_pytorch/transformers_replace/* .venv/lib/python3.11/site-packages/transformers/
 cd ../../..
 source policy/openpi/openpi/.venv/bin/activate
-uv pip install peft tensorflow==2.18.0 tf-keras tensorflow_datasets tianshou==0.2.0 robosuite==1.4.0 rich timm>=0.9.10 draccus tensorflow_graphics dlimp@git+https://github.com/kvablack/dlimp.git@5edaa4691567873d495633f2708982b42edf1972
 ```
 
 
@@ -58,4 +58,9 @@ action_normalize: "minmax"
 state_normalize: "minmax"
 trainer_class: Trainer
 
+```
+
+# Training Example
+```shell
+python train.py -p pi0_libero_object -t libero_object_rlds -o ckpt/pi0_libero_obj -c default
 ```
