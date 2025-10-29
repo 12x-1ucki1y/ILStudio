@@ -163,6 +163,9 @@ if the platform is headless, please use the command below to solve this issue:
 ```shell
 export MUJOCO_GL=egl
 ```
+
+- when `eval_sim.py` raises errors like `malloc(): unaligned tcache chunk detected`, please add `--use_spawn` at the end fo the evaluation command.  
+
 ## 🙏 Acknowledge
 This repo is built on the open source codebases below. Thanks to the authors' wonderful contributions.
 

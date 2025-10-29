@@ -521,9 +521,9 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
             drop_last=is_training,
             pin_memory=args.dataloader_pin_memory,
             persistent_workers=True,
-            prefetch_factor=2,
+            prefetch_factor=getattr(args, 'dataloader_prefetch_factor', 2),
         )
-        loader = BackgroundPrefetcher(loader, 4)
+        loader = BackgroundPrefetcher(loader, getattr(args, 'dataloader_prefetch_factor', 2))
     elif is_iter_data(dataset):
         if is_rlds_data(dataset.dataset):
             # RLDS dataset
