@@ -3,7 +3,7 @@ ckpt
 results/
 hub/
 assets/robot/
-policy/act_*
+policy/*gc
 data/
 data
 __pycache__/

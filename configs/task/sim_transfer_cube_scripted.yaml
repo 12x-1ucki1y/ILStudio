@@ -7,6 +7,7 @@ datasets:
       chunk_size: 100
       ctrl_space: 'joint'
       ctrl_type: 'abs'
+      preload_data: true
 
 action_dim: 14
 state_dim: 14
