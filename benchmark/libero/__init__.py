@@ -33,6 +33,7 @@ class LiberoEnv(MetaEnv):
         self.ctrl_space = getattr(self.config, 'ctrl_space', 'ee')
         self.ctrl_type = getattr(self.config, 'ctrl_type', 'delta')
         self.camera_ids = getattr(self.config, 'camera_ids', [0,])
+        self.use_openvla_gripper = getattr(self.config, 'use_openvla_gripper', True)
         env = self.create_env()
         super().__init__(env)
         
@@ -70,8 +71,9 @@ class LiberoEnv(MetaEnv):
         assert maction['ctrl_space']==self.ctrl_space, f"The ctrl_space of MetaAction {maction['ctrl_space']} doesn't match the action space of environment {self.ctrl_space}"
         assert maction['ctrl_type']==self.ctrl_type, "Action must be delta action for LIBERO"
         actions = maction['action'] # (action_dim, )
-        actions[:6] = actions[:6]*np.array([0.5, 0.5, 0.5, 0.05, 0.05, 0.05, ])
-        actions[6] = 1.-2.*actions[6]
+        # actions[:6] = actions[:6]*np.array([0.5, 0.5, 0.5, 0.05, 0.05, 0.05, ])
+        if self.use_openvla_gripper:
+            actions[6] = 1.-2.*actions[6]
         return actions
         
     def obs2meta(self, obs):

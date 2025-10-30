@@ -114,6 +114,7 @@ class TrainingConfig:
                 setattr(instance, key, value)
             else:
                 print(f"Warning: Unknown configuration key '{key}' in {yaml_path}")
+                setattr(instance, key, value)
         
         return instance
     

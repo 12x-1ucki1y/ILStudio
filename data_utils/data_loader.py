@@ -21,9 +21,8 @@ try:
 except ImportError:
     TORCHDATA_AVAILABLE = False
     warnings.warn("torchdata not available. Multi-dataset mixing will not be supported.")
-import logging
-
-logger = logging.getLogger(__name__)
+# import logging
+# logger = logging.getLogger(__name__)
 
 def is_distributed():
     return dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1
@@ -53,7 +52,7 @@ class BackgroundPrefetcher:
         except TypeError:
             raise TypeError("BackgroundPrefetcher requires the wrapped DataLoader to have a __len__ method.")
              
-        logger.info(f"[BGPrefetcher] Initializing... Wrapped DataLoader len={internal_len}")
+        # logger.info(f"[BGPrefetcher] Initializing... Wrapped DataLoader len={internal_len}")
         
         if not hasattr(loader, 'persistent_workers') or not loader.persistent_workers:
             raise ValueError("BackgroundPrefetcher requires persistent_workers=True on the wrapped DataLoader.")
@@ -66,7 +65,7 @@ class BackgroundPrefetcher:
             self.num_batches_to_prefetch = getattr(loader, 'prefetch_factor', 2) + getattr(loader, 'num_workers', 1)
         else:
             self.num_batches_to_prefetch = max(1, num_batches_to_prefetch) # Must prefetch at least 1
-        logger.info(f"[BGPrefetcher] Will prefetch {self.num_batches_to_prefetch} batches per epoch.")
+        # logger.info(f"[BGPrefetcher] Will prefetch {self.num_batches_to_prefetch} batches per epoch.")
 
         self.epoch = 0 # Start at epoch 0
         self.prefetch_thread: Optional[threading.Thread] = None
@@ -74,10 +73,10 @@ class BackgroundPrefetcher:
         self._stop_event = threading.Event()
 
         # --- Initial blocking prefetch for Epoch 0 ---
-        logger.info(f"[BGPrefetcher] Performing initial (blocking) prefetch for starting Epoch {self.epoch} ({self.num_batches_to_prefetch} batches)... ---")
+        # logger.info(f"[BGPrefetcher] Performing initial (blocking) prefetch for starting Epoch {self.epoch} ({self.num_batches_to_prefetch} batches)... ---")
         start_time = time.time()
         self._prefetch_job(self.epoch) # Run directly, puts result in queue
-        logger.info(f"[BGPrefetcher] Initial prefetch done in {time.time() - start_time:.2f}s ---")
+        # logger.info(f"[BGPrefetcher] Initial prefetch done in {time.time() - start_time:.2f}s ---")
         # Result for Epoch 0 is now in the queue.
 
     def _prefetch_job(self, epoch_to_fetch: int):
@@ -87,7 +86,7 @@ class BackgroundPrefetcher:
         """
         thread_id = threading.get_ident()
         if self._stop_event.is_set():
-            logger.info(f"[BGPrefetcher] (Thread {thread_id}) Stop event set, skipping prefetch for Epoch {epoch_to_fetch}.")
+            # logger.info(f"[BGPrefetcher] (Thread {thread_id}) Stop event set, skipping prefetch for Epoch {epoch_to_fetch}.")
             try: self.data_queue.put_nowait(StopIteration) 
             except queue.Full: pass 
             return
@@ -100,7 +99,7 @@ class BackgroundPrefetcher:
                 self.loader.sampler.set_epoch(epoch_to_fetch)
                 
             # 2. Create iterator and fetch first k batches (cold start bottleneck spread over k batches)
-            logger.info(f"[BGPrefetcher] (Thread {thread_id}) Starting cold start for Epoch {epoch_to_fetch} (fetching {self.num_batches_to_prefetch} batches)... ---")
+            # logger.info(f"[BGPrefetcher] (Thread {thread_id}) Starting cold start for Epoch {epoch_to_fetch} (fetching {self.num_batches_to_prefetch} batches)... ---")
             start_cold_start = time.time()
             
             epoch_iter = iter(self.loader) # <-- Create iterator
@@ -111,10 +110,10 @@ class BackgroundPrefetcher:
                 # Log timing for the very first batch fetch of the cold start
                 if i == 0:
                     first_batch_time = time.time() - start_cold_start
-                    logger.info(f"[BGPrefetcher] (Thread {thread_id}) Fetched *first* batch of Epoch {epoch_to_fetch} in {first_batch_time:.2f}s.")
+                    # logger.info(f"[BGPrefetcher] (Thread {thread_id}) Fetched *first* batch of Epoch {epoch_to_fetch} in {first_batch_time:.2f}s.")
 
             total_cold_start_time = time.time() - start_cold_start
-            logger.info(f"[BGPrefetcher] (Thread {thread_id}) *Finished* cold start for Epoch {epoch_to_fetch} (fetched {len(prefetched_batches)} batches) in {total_cold_start_time:.2f}s total. ---")
+            # logger.info(f"[BGPrefetcher] (Thread {thread_id}) *Finished* cold start for Epoch {epoch_to_fetch} (fetched {len(prefetched_batches)} batches) in {total_cold_start_time:.2f}s total. ---")
             
             # 3. Put successful result in queue (iterator is now advanced past the prefetched batches)
             self.data_queue.put((epoch_iter, prefetched_batches, epoch_to_fetch))
@@ -122,31 +121,31 @@ class BackgroundPrefetcher:
         except StopIteration:
             # This happens if the dataloader has less than k batches
             total_cold_start_time = time.time() - start_cold_start
-            logger.info(f"[BGPrefetcher] (Thread {thread_id}) DataLoader exhausted during prefetch for Epoch {epoch_to_fetch} after fetching {len(prefetched_batches)} batches (needed {self.num_batches_to_prefetch}). Total time: {total_cold_start_time:.2f}s.")
+            # logger.info(f"[BGPrefetcher] (Thread {thread_id}) DataLoader exhausted during prefetch for Epoch {epoch_to_fetch} after fetching {len(prefetched_batches)} batches (needed {self.num_batches_to_prefetch}). Total time: {total_cold_start_time:.2f}s.")
             # Put the partially fetched batches (if any) and signal exhaustion
             # We pass None for the iterator as it's exhausted
             self.data_queue.put((None, prefetched_batches, epoch_to_fetch)) 
              
         except Exception as e:
             import traceback
-            logger.error(f"[BGPrefetcher] (Thread {thread_id}) Prefetch failed for Epoch {epoch_to_fetch}: {e}\n{traceback.format_exc()} ---")
+            # logger.info(f"[BGPrefetcher] (Thread {thread_id}) Prefetch failed for Epoch {epoch_to_fetch}: {e}\n{traceback.format_exc()} ---")
             self.data_queue.put(e)
 
     def _start_background_prefetch(self, epoch_to_fetch: int):
         """ Safely starts the background prefetch thread """
         if self.prefetch_thread is not None and self.prefetch_thread.is_alive():
-            logger.debug(f"[BGPrefetcher] (Main) Joining previous prefetch thread (Epoch {epoch_to_fetch-1})...")
+            # logger.info(f"[BGPrefetcher] (Main) Joining previous prefetch thread (Epoch {epoch_to_fetch-1})...")
             self.prefetch_thread.join(timeout=60) # Increased timeout
-            if self.prefetch_thread.is_alive():
-                logger.warning(f"[BGPrefetcher] (Main) Previous prefetch thread did not join cleanly!")
+            # if self.prefetch_thread.is_alive():
+                # logger.info(f"[BGPrefetcher] (Main) Previous prefetch thread did not join cleanly!")
             # else:
-            #      logger.debug(f"[BGPrefetcher] (Main) Previous prefetch thread joined.")
+            #      # logger.info(f"[BGPrefetcher] (Main) Previous prefetch thread joined.")
             
         if self._stop_event.is_set():
-            logger.info(f"[BGPrefetcher] (Main) Stop event set, not starting prefetch for Epoch {epoch_to_fetch}.")
+            # logger.info(f"[BGPrefetcher] (Main) Stop event set, not starting prefetch for Epoch {epoch_to_fetch}.")
             return
 
-        logger.info(f"[BGPrefetcher] (Main) Starting background prefetch thread for Epoch {epoch_to_fetch}... ---")
+        # logger.info(f"[BGPrefetcher] (Main) Starting background prefetch thread for Epoch {epoch_to_fetch}... ---")
         self.prefetch_thread = threading.Thread(
             target=self._prefetch_job, 
             args=(epoch_to_fetch,),
@@ -158,27 +157,27 @@ class BackgroundPrefetcher:
         """ Trainer calls this at the start of each epoch (e.g., Epoch N) """
         
         current_epoch_requested = self.epoch 
-        logger.info(f"[BGPrefetcher] (Main) __iter__ called for Epoch {current_epoch_requested}. Waiting for prefetched data... ---")
+        # logger.info(f"[BGPrefetcher] (Main) __iter__ called for Epoch {current_epoch_requested}. Waiting for prefetched data... ---")
         
         # 1. Block and get the result for the CURRENT epoch (Epoch N)
         try:
             data: PrefetchResult = self.data_queue.get(timeout=1800) # 30 minutes timeout
         except queue.Empty:
-            logger.error(f"Timeout waiting for prefetched data for Epoch {current_epoch_requested}.")
+            # logger.info(f"Timeout waiting for prefetched data for Epoch {current_epoch_requested}.")
             raise TimeoutError(f"Timeout waiting for prefetched data for Epoch {current_epoch_requested}.")
 
         # Check for error signals
         if isinstance(data, Exception): 
-            logger.error(f"[BGPrefetcher] (Main) Received exception from prefetch job for Epoch {current_epoch_requested}.")
+            # logger.info(f"[BGPrefetcher] (Main) Received exception from prefetch job for Epoch {current_epoch_requested}.")
             raise data
         # StopIteration signal is handled within the generator now
             
         # Unpack successful prefetch result (iterator might be None if exhausted during prefetch)
         current_iter, prefetched_batches, fetched_epoch = data
-        logger.info(f"[BGPrefetcher] (Main) Successfully received {len(prefetched_batches)} prefetched batches for Epoch {fetched_epoch}. ---")
+        # logger.info(f"[BGPrefetcher] (Main) Successfully received {len(prefetched_batches)} prefetched batches for Epoch {fetched_epoch}. ---")
 
         if fetched_epoch != current_epoch_requested:
-            logger.warning(f"[BGPrefetcher] Epoch mismatch! Expected {current_epoch_requested}, got {fetched_epoch}. Adjusting internal epoch counter.")
+            # logger.info(f"[BGPrefetcher] Epoch mismatch! Expected {current_epoch_requested}, got {fetched_epoch}. Adjusting internal epoch counter.")
             current_epoch_requested = fetched_epoch # Trust the fetched data
 
         # 2. Start prefetching the *NEXT* epoch (N+1) in the background *NOW*
@@ -194,32 +193,32 @@ class BackgroundPrefetcher:
         """ Generator yields prefetched batches, then remaining batches for one epoch. """
         total_yielded_this_epoch = 0
         try:
-            logger.info(f"[BGPrefetcher] (Generator) Starting Epoch {epoch_num} with {len(prefetched_list)} prefetched batches.")
+            # logger.info(f"[BGPrefetcher] (Generator) Starting Epoch {epoch_num} with {len(prefetched_list)} prefetched batches.")
             
             # 1. Yield the prefetched batches first
             for i, batch in enumerate(prefetched_list):
-                # logger.debug(f"[BGPrefetcher] (Generator) Yielding prefetched batch {i} for Epoch {epoch_num}...")
+                # # logger.info(f"[BGPrefetcher] (Generator) Yielding prefetched batch {i} for Epoch {epoch_num}...")
                 yield batch
                 total_yielded_this_epoch += 1
 
             # 2. Yield remaining batches from the iterator (if it exists and wasn't exhausted)
             if iterator is not None:
-                # logger.debug(f"[BGPrefetcher] (Generator) Yielding remaining batches for Epoch {epoch_num}...")
+                # # logger.info(f"[BGPrefetcher] (Generator) Yielding remaining batches for Epoch {epoch_num}...")
                 for batch in iterator:
                     yield batch
                     total_yielded_this_epoch += 1
-            else:
-                logger.info(f"[BGPrefetcher] (Generator) Iterator was already exhausted during prefetch for Epoch {epoch_num}.")
+            # else:
+                # logger.info(f"[BGPrefetcher] (Generator) Iterator was already exhausted during prefetch for Epoch {epoch_num}.")
 
 
-            logger.info(f"\n[BGPrefetcher] (Generator) Epoch {epoch_num} exhausted after {total_yielded_this_epoch} batches.")
+            # logger.info(f"\n[BGPrefetcher] (Generator) Epoch {epoch_num} exhausted after {total_yielded_this_epoch} batches.")
 
         except Exception as e:
-             logger.error(f"[BGPrefetcher] (Generator) Error during iteration for Epoch {epoch_num}: {e}", exc_info=True)
+             # logger.info(f"[BGPrefetcher] (Generator) Error during iteration for Epoch {epoch_num}: {e}", exc_info=True)
              raise e
         finally:
             # Update epoch counter AFTER the generator is exhausted
-            logger.debug(f"[BGPrefetcher] (Generator) Incrementing epoch counter after Epoch {epoch_num} finished.")
+            # logger.info(f"[BGPrefetcher] (Generator) Incrementing epoch counter after Epoch {epoch_num} finished.")
             self.epoch = epoch_num + 1
 
     def __len__(self):
@@ -235,227 +234,27 @@ class BackgroundPrefetcher:
         return getattr(self.loader, 'batch_sampler', None)
 
     def set_epoch(self, epoch: int):
-        logger.info(f"[BGPrefetcher] (Main) Trainer called set_epoch({epoch}). Internal epoch is {self.epoch}. (Call ignored by prefetcher internal logic)")
+        # logger.info(f"[BGPrefetcher] (Main) Trainer called set_epoch({epoch}). Internal epoch is {self.epoch}. (Call ignored by prefetcher internal logic)")
         pass
 
     def shutdown(self):
-        logger.info("[BGPrefetcher] Shutting down...")
+        # logger.info("[BGPrefetcher] Shutting down...")
         self._stop_event.set()
         # Try to unblock queue if thread is waiting to put
         try: self.data_queue.put(StopIteration, block=False) 
-        except queue.Full: logger.warning("[BGPrefetcher] Queue full during shutdown signal.")
+        except queue.Full: # logger.info("[BGPrefetcher] Queue full during shutdown signal.")
+            pass
         if self.prefetch_thread and self.prefetch_thread.is_alive():
-            logger.info("[BGPrefetcher] Joining background thread...")
+            # logger.info("[BGPrefetcher] Joining background thread...")
             self.prefetch_thread.join(timeout=10) 
-            if self.prefetch_thread.is_alive():
-                logger.warning("[BGPrefetcher] Background thread did not join cleanly.")
+            # if self.prefetch_thread.is_alive():
+                # logger.info("[BGPrefetcher] Background thread did not join cleanly.")
         # Drain queue
         while not self.data_queue.empty():
             try: self.data_queue.get_nowait()
             except queue.Empty: break
-        logger.info("[BGPrefetcher] Shutdown complete.")
-
-# class BackgroundPrefetcher:
-#     """
-#     Simplified prefetcher: Reliably prefetches the next epoch's iterator 
-#     and first batch in a background thread to hide cold start latency.
-    
-#     *Does not* handle skipping batches when resuming from checkpoint internally.
-#     Requires persistent_workers=True on the wrapped DataLoader.
-#     Requires the wrapped DataLoader to have a __len__ method.
-#     """
-    
-#     def __init__(self, loader: DataLoader): 
-#         internal_len = -1
-#         try:
-#             internal_len = len(loader)
-#             if internal_len <= 0:
-#                  raise ValueError("DataLoader length must be positive.")
-#         except TypeError:
-#              raise TypeError("BackgroundPrefetcher requires the wrapped DataLoader to have a __len__ method.")
-             
-#         logger.info(f"[BGPrefetcher] Initializing... Wrapped DataLoader len={internal_len}")
-        
-#         # if not hasattr(loader, 'persistent_workers') or not loader.persistent_workers:
-#         #     raise ValueError("BackgroundPrefetcher requires persistent_workers=True on the wrapped DataLoader.")
-            
-#         self.loader = loader
-#         self.epoch = 0 # Start at epoch 0
-#         self.prefetch_thread: Optional[threading.Thread] = None
-#         # Queue stores: (iterator, first_batch, epoch_fetched) or Exception or StopIteration
-#         self.data_queue = queue.Queue(maxsize=1) # maxsize=1 is sufficient
-#         self._stop_event = threading.Event()
-
-#         # --- Initial blocking prefetch for Epoch 0 ---
-#         logger.info(f"[BGPrefetcher] Performing initial (blocking) prefetch for starting Epoch {self.epoch}... ---")
-#         start_time = time.time()
-#         self._prefetch_job(self.epoch) # Run directly, puts result in queue
-#         logger.info(f"[BGPrefetcher] Initial prefetch done in {time.time() - start_time:.2f}s ---")
-#         # Result for Epoch 0 is now in the queue.
-
-#     def _prefetch_job(self, epoch_to_fetch: int):
-#         """
-#         Runs in background thread. Sets sampler, creates iterator, fetches first batch, puts result in queue.
-#         """
-#         thread_id = threading.get_ident()
-#         if self._stop_event.is_set():
-#              logger.info(f"[BGPrefetcher] (Thread {thread_id}) Stop event set, skipping prefetch for Epoch {epoch_to_fetch}.")
-#              try: self.data_queue.put_nowait(StopIteration) 
-#              except queue.Full: pass 
-#              return
-             
-#         try:
-#             # 1. Set sampler epoch
-#             if isinstance(self.loader.sampler, Sampler) and hasattr(self.loader.sampler, "set_epoch"):
-#                 self.loader.sampler.set_epoch(epoch_to_fetch)
-                
-#             # 2. Create iterator and fetch first batch (cold start bottleneck)
-#             logger.info(f"[BGPrefetcher] (Thread {thread_id}) Starting cold start for Epoch {epoch_to_fetch}... ---")
-#             epoch_iter = iter(self.loader) # <-- Create iterator
-#             first_batch = next(epoch_iter) # <-- Fetch first batch (blocking)
-            
-#             logger.info(f"[BGPrefetcher] (Thread {thread_id}) *Finished* cold start for Epoch {epoch_to_fetch}. ---")
-            
-#             # 3. Put successful result in queue
-#             self.data_queue.put((epoch_iter, first_batch, epoch_to_fetch))
-            
-#         except StopIteration:
-#             logger.info(f"[BGPrefetcher] (Thread {thread_id}) DataLoader empty for Epoch {epoch_to_fetch}. ---")
-#             self.data_queue.put(StopIteration) 
-#         except Exception as e:
-#             import traceback
-#             logger.error(f"[BGPrefetcher] (Thread {thread_id}) Prefetch failed for Epoch {epoch_to_fetch}: {e}\n{traceback.format_exc()} ---")
-#             self.data_queue.put(e)
-
-#     def _start_background_prefetch(self, epoch_to_fetch: int):
-#         """ Safely starts the background prefetch thread """
-#         if self.prefetch_thread is not None and self.prefetch_thread.is_alive():
-#              logger.debug(f"[BGPrefetcher] (Main) Joining previous prefetch thread (Epoch {epoch_to_fetch-1})...")
-#              self.prefetch_thread.join(timeout=30) 
-#              if self.prefetch_thread.is_alive():
-#                   logger.warning(f"[BGPrefetcher] (Main) Previous prefetch thread did not join cleanly!")
-#              # else:
-#              #      logger.debug(f"[BGPrefetcher] (Main) Previous prefetch thread joined.")
-             
-#         if self._stop_event.is_set():
-#              logger.info(f"[BGPrefetcher] (Main) Stop event set, not starting prefetch for Epoch {epoch_to_fetch}.")
-#              return
-
-#         logger.info(f"[BGPrefetcher] (Main) Starting background prefetch thread for Epoch {epoch_to_fetch}... ---")
-#         self.prefetch_thread = threading.Thread(
-#             target=self._prefetch_job, 
-#             args=(epoch_to_fetch,),
-#             daemon=True
-#         )
-#         self.prefetch_thread.start()
-
-#     def __iter__(self):
-#         """ Trainer calls this at the start of each epoch (e.g., Epoch N) """
-        
-#         current_epoch_requested = self.epoch 
-#         logger.info(f"[BGPrefetcher] (Main) __iter__ called for Epoch {current_epoch_requested}. Waiting for prefetched data... ---")
-        
-#         # 1. Block and get the result for the CURRENT epoch (Epoch N)
-#         try:
-#             data = self.data_queue.get(timeout=1800) # 30 minutes timeout
-#         except queue.Empty:
-#             logger.error(f"Timeout waiting for prefetched data for Epoch {current_epoch_requested}.")
-#             raise TimeoutError(f"Timeout waiting for prefetched data for Epoch {current_epoch_requested}.")
-
-#         # Check for error signals
-#         if isinstance(data, Exception): 
-#             logger.error(f"[BGPrefetcher] (Main) Received exception from prefetch job for Epoch {current_epoch_requested}.")
-#             raise data
-#         if data is StopIteration:
-#             logger.info(f"[BGPrefetcher] (Main) Received StopIteration signal for Epoch {current_epoch_requested}.")
-#             raise StopIteration 
-            
-#         # Unpack successful prefetch result
-#         current_iter, first_batch, fetched_epoch = data
-#         logger.info(f"[BGPrefetcher] (Main) Successfully received prefetched data for Epoch {fetched_epoch}. ---")
-
-#         # Basic sanity check
-#         if fetched_epoch != current_epoch_requested:
-#              logger.warning(f"[BGPrefetcher] Epoch mismatch! Expected {current_epoch_requested}, got {fetched_epoch}.")
-#              # Trust the fetched epoch as the source of truth for the current iteration
-#              current_epoch_requested = fetched_epoch 
-
-#         # 2. Start prefetching the *NEXT* epoch (N+1) in the background *NOW*
-#         next_epoch_to_prefetch = current_epoch_requested + 1
-#         self._start_background_prefetch(next_epoch_to_prefetch)
-
-#         # 3. Define and return the generator for the CURRENT epoch (Epoch N)
-#         return self._generator(first_batch, current_iter, current_epoch_requested)
-
-
-#     def _generator(self, first, iterator, epoch_num):
-#         """ Generator yields batches for one epoch. """
-#         try:
-#             # logger.info(f"[BGPrefetcher] (Generator) Starting Epoch {epoch_num}.")
-            
-#             total_yielded_this_epoch = 0
-#             current_step_in_epoch = 0 
-            
-#             # Yield the first batch (already fetched)
-#             # logger.debug(f"[BGPrefetcher] (Generator) Yielding first batch (step 0) for Epoch {epoch_num}...")
-#             yield first
-#             total_yielded_this_epoch += 1
-#             current_step_in_epoch += 1
-
-#             # Yield remaining batches from the iterator
-#             for batch in iterator:
-#                 yield batch
-#                 total_yielded_this_epoch += 1
-#                 current_step_in_epoch += 1
-
-#             logger.info(f"\n[BGPrefetcher] (Generator) Epoch {epoch_num} exhausted after {total_yielded_this_epoch} batches.")
-
-#         except Exception as e:
-#              logger.error(f"[BGPrefetcher] (Generator) Error during iteration for Epoch {epoch_num}: {e}", exc_info=True)
-#              raise e
-#         finally:
-#             # Update epoch counter AFTER the generator for the current epoch is fully exhausted
-#             logger.debug(f"[BGPrefetcher] (Generator) Incrementing epoch counter after Epoch {epoch_num} finished.")
-#             # Be careful with direct modification if multiple generators could exist (shouldn't with Trainer)
-#             self.epoch = epoch_num + 1
-
-#     def __len__(self):
-#         # Must return the correct length for Trainer's calculations
-#         return len(self.loader) 
-    
-#     @property
-#     def sampler(self):
-#         # Needed by Trainer to call set_epoch
-#         return self.loader.sampler
-
-#     @property
-#     def batch_sampler(self):
-#         # Needed for potential compatibility with skipping logic (though we removed internal skipping)
-#         return getattr(self.loader, 'batch_sampler', None)
-
-#     def set_epoch(self, epoch: int):
-#          # Trainer calls this *before* __iter__. 
-#          # We log it but primarily rely on our internal epoch counter managed by the generator.
-#          logger.info(f"[BGPrefetcher] (Main) Trainer called set_epoch({epoch}). Internal epoch counter is {self.epoch}.")
-#          # We could potentially add logic here to resync self.epoch if needed,
-#          # but the background thread uses self.epoch+1, so it should stay aligned.
-#          pass
-
-#     def shutdown(self):
-#          logger.info("[BGPrefetcher] Shutting down...")
-#          self._stop_event.set()
-#          try: self.data_queue.put(StopIteration, block=True, timeout=1) 
-#          except queue.Full: logger.warning("[BGPrefetcher] Queue full during shutdown signal.")
-#          if self.prefetch_thread and self.prefetch_thread.is_alive():
-#               logger.info("[BGPrefetcher] Joining background thread...")
-#               self.prefetch_thread.join(timeout=10) 
-#               if self.prefetch_thread.is_alive():
-#                    logger.warning("[BGPrefetcher] Background thread did not join cleanly.")
-#          while not self.data_queue.empty():
-#              try: self.data_queue.get_nowait()
-#              except queue.Empty: break
-#          logger.info("[BGPrefetcher] Shutdown complete.")
-         
+        # logger.info("[BGPrefetcher] Shutdown complete.")
+ 
 def get_dataloader(train_dataset, val_dataset=None, processor=None, collator=None, args=None):
     """
     Create DataLoader from single dataset or multiple datasets.

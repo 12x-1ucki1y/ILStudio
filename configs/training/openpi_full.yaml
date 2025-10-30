@@ -23,10 +23,10 @@ preload_data: false
 # Core optimizer settings that are typically set once per training setup
 
 # Learning rate and scheduling
-learning_rate: 0.0001
-weight_decay: 0.0001
-warmup_steps: 0
-warmup_ratio: 0.0
+learning_rate: 5e-5
+weight_decay: 1e-10
+warmup_steps: 1000
+warmup_ratio: 0.05
 lr_scheduler_type: "cosine"
 
 # Optimizer settings
@@ -49,7 +49,7 @@ report_to: "tensorboard"
 
 # Saving settings
 save_strategy: "steps"
-save_steps: 1000
+save_steps: 5000
 save_total_limit: 50
 
 # =============================================================================
@@ -76,10 +76,10 @@ seed: 0
 
 # Training duration
 num_train_epochs: 3
-max_steps: 10000
+max_steps: 30000
 
 # Batch sizes (typically determined by hardware)
-per_device_train_batch_size: 64
+per_device_train_batch_size: 32
 per_device_eval_batch_size: 32
 
 # Logging directory (often derived from output_dir)

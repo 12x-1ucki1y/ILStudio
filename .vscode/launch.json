@@ -18,7 +18,7 @@
                 "HF_ENDPOINT": "https://hf-mirror.com",
             },
             "args": [//robomimic+act
-                "-t", "robomimic_square_ph", "-p", "act_robomimic", "-o", "ckpt/act_robomimic_bs128_asdajkl", "-c", "act"
+                "-t", "sim_transfer_cube_scripted", "-p", "act", "-o", "ckpt/actasdasdjaksdkl", "-c", "default"
             ],
             // "args": [//robomimic+act
             //     "-t", "sim_transfer_cube_scripted", "-p", "act", "-c", "act", "-o", "ckpt/tmp_act_aloha_1"
