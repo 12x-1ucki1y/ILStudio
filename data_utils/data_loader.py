@@ -324,7 +324,7 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
         )
         loader = BackgroundPrefetcher(loader, getattr(args, 'dataloader_prefetch_factor', 2))
     elif is_iter_data(dataset):
-        if is_rlds_data(dataset.dataset):
+        if hasattr(dataset, 'dataset') and is_rlds_data(dataset.dataset):
             # RLDS dataset
             wrapped_data = WrappedIterableDataset(dataset, processor)
             batch_size = args.per_device_train_batch_size if is_training else args.per_device_eval_batch_size
