@@ -20,7 +20,6 @@ def parse_param():
     
     Returns:
         args: Parsed arguments namespace
-        training_args: TrainingArguments object
     """
     parser = argparse.ArgumentParser(description='Train a policy model')
     
@@ -37,32 +36,54 @@ def parse_param():
     # Parse arguments (allow unknown for dotted overrides)
     args, unknown = parser.parse_known_args()
     
-    # Load training configuration via unified config loader
-    cfg_loader = ConfigLoader(args=args, unknown_args=unknown)
-    training_config, training_args, training_cfg_path = cfg_loader.load_training(args.training_config, hyper_args=args)
-    setattr(args, 'config_overrides', cfg_loader._overrides)
-    setattr(args, 'training_cfg_path', training_cfg_path)
-    return args, training_args
+    # Store unknown args for later use
+    setattr(args, 'unknown_args', unknown)
+    return args
 
-def main(args, training_args):
+def load_all_configs(args):
+    """
+    Load all configurations in one place.
+    
+    Args:
+        args: Parsed command line arguments
+        
+    Returns:
+        tuple: (task_config, policy_config, training_args, config_paths)
+    """
+    # Create config loader once
+    cfg_loader = ConfigLoader(args=args, unknown_args=getattr(args, 'unknown_args', []))
+    
+    # Load all configurations
+    task_config, task_cfg_path = cfg_loader.load_task(args.task)
+    policy_config, policy_cfg_path = cfg_loader.load_policy(args.policy)
+    training_config, training_args, training_cfg_path = cfg_loader.load_training(args.training_config, hyper_args=args)
+    
+    # Merge all parameters
+    ConfigLoader.merge_all_parameters(task_config, policy_config, training_config, args)
+    
+    config_paths = {
+        'task': task_cfg_path,
+        'policy': policy_cfg_path,
+        'training': training_cfg_path
+    }
+    
+    return task_config, policy_config, training_args, config_paths
+
+def main(args):
     """
     Main training function for the VLA (Vision-Language-Action) model.
 
     Args:
         args (HyperArguments): Training hyperparameters and settings
-        training_args (transformers.TrainingArguments): Training arguments from config
 
     Returns:
         None. The trained model and statistics are saved to the output directory
         specified in training_args.
     """
     set_seed(1)
-    # Load all configurations and merge all parameters using unified loader
-    cfg_loader = ConfigLoader(args=args, unknown_args=getattr(args, 'config_overrides', {}))
-    task_config, task_cfg_path = cfg_loader.load_task(args.task)
-    policy_config, policy_cfg_path = cfg_loader.load_policy(args.policy)
-    training_config, _, training_cfg_path = cfg_loader.load_training(getattr(args, 'training_cfg_path', args.training_config), hyper_args=args)
-    ConfigLoader.merge_all_parameters(task_config, policy_config, training_config, args)
+    
+    # Load all configurations in one place
+    task_config, policy_config, training_args, config_paths = load_all_configs(args)
     
     # Save policy metadata to output dir
     metadata_path = os.path.join(training_args.output_dir, 'policy_metadata.json')
@@ -73,8 +94,8 @@ def main(args, training_args):
             }, f, indent=2)
     
     # Load model 
-    print(f"Loading policy config: {policy_cfg_path}")
-    model_components = load_policy_model_for_training(policy_cfg_path, args, task_config)
+    print(f"Loading policy config: {config_paths['policy']}")
+    model_components = load_policy_model_for_training(config_paths['policy'], args, task_config)
     model = model_components['model']
     config = model_components.get('config', None)
     if config:
@@ -86,12 +107,12 @@ def main(args, training_args):
     train_data, val_data = data_dict['train'], data_dict['eval']
     
     # Create data loader with policy-spefific data processor and collator
-    data_processor = get_policy_data_processor(policy_cfg_path, args, model_components)
-    data_collator = get_policy_data_collator(policy_cfg_path, args, model_components)
+    data_processor = get_policy_data_processor(config_paths['policy'], args, model_components)
+    data_collator = get_policy_data_collator(config_paths['policy'], args, model_components)
     train_loader, eval_loader = get_dataloader(train_data, val_data, data_processor, data_collator, args) 
     
     # Get Trainer
-    train_class = get_policy_trainer_class(policy_cfg_path) or BaseTrainer
+    train_class = get_policy_trainer_class(config_paths['policy']) or BaseTrainer
     trainer = train_class(
         args=training_args,
         model=model,
@@ -106,9 +127,14 @@ def main(args, training_args):
         trainer.save_model(training_args.output_dir)
 
 if __name__ == '__main__':
-    args, training_args = parse_param()
+    args = parse_param()
+    
+    # Load configs to get training_args for output_dir setup
+    _, _, training_args, _ = load_all_configs(args)
+    
     os.makedirs(training_args.output_dir, exist_ok=True)
     all_ckpts = [os.path.join(training_args.output_dir, ckpt_name) for ckpt_name in os.listdir(training_args.output_dir) if ckpt_name.startswith('checkpoint-') and os.path.isdir(os.path.join(training_args.output_dir, ckpt_name))]
     if len(all_ckpts)==0: 
         training_args.resume_from_checkpoint = None
-    main(args, training_args)
+    
+    main(args)
