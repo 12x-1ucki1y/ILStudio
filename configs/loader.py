@@ -143,27 +143,14 @@ class ConfigLoader:
                 # Top-level overrides win (command line overrides)
                 model_params[key] = value
 
-        training_params = {
-            'preload_data': training_config.preload_data,
-            'logging_strategy': training_config.logging_strategy,
-            'logging_steps': training_config.logging_steps,
-            'report_to': training_config.report_to,
-            'save_strategy': training_config.save_strategy,
-            'save_steps': training_config.save_steps,
-            'save_total_limit': training_config.save_total_limit,
-            'dataloader_num_workers': training_config.dataloader_num_workers,
-            'dataloader_pin_memory': training_config.dataloader_pin_memory,
-            'remove_unused_columns': training_config.remove_unused_columns,
-            'do_eval': training_config.do_eval,
-            'eval_steps': training_config.eval_steps,
-            'seed': training_config.seed,
-            'num_train_epochs': training_config.num_train_epochs,
-            'max_steps': training_config.max_steps,
-            'per_device_train_batch_size': training_config.per_device_train_batch_size,
-            'per_device_eval_batch_size': training_config.per_device_eval_batch_size,
-            'logging_dir': training_config.logging_dir,
-            'resume_from_checkpoint': training_config.resume_from_checkpoint
-        }
+        # Dynamically extract all training parameters from training_config
+        training_params = {}
+        
+        # Add preload_data (special parameter not part of TrainingArguments)
+        training_params['preload_data'] = training_config.preload_data
+        
+        # Add all parameters from the config_dict (these will be passed to TrainingArguments)
+        training_params.update(training_config.config_dict)
 
         cfg_params = policy_config.get('config_params', {}) if isinstance(policy_config, dict) else {}
         # Check top-level first (command line overrides), then model_args, then config_params, then task_config
