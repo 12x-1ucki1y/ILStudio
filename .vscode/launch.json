@@ -17,9 +17,12 @@
                 "ILSTD_CACHE": "/mnt/model/ilstd/data",
                 "HF_ENDPOINT": "https://hf-mirror.com",
             },
-            "args": [//robomimic+act
-                "-t", "sim_transfer_cube_scripted", "-p", "act", "-o", "ckpt/actasdasdjaksdkl", "-c", "default"
+            "args": [ // openpi policy server
+                "-m", "ckpt/pi0_libero_obj_full"
             ],
+            // "args": [//robomimic+act
+            //     "-t", "sim_transfer_cube_scripted", "-p", "act", "-o", "ckpt/actasdasdjaksdkl", "-c", "default"
+            // ],
             // "args": [//robomimic+act
             //     "-t", "sim_transfer_cube_scripted", "-p", "act", "-c", "act", "-o", "ckpt/tmp_act_aloha_1"
             // ],

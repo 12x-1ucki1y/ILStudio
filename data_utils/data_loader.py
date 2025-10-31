@@ -326,6 +326,9 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
     elif is_iter_data(dataset):
         if hasattr(dataset, 'dataset') and is_rlds_data(dataset.dataset):
             # RLDS dataset
+            # set tf data options here
+            
+            
             wrapped_data = WrappedIterableDataset(dataset, processor)
             batch_size = args.per_device_train_batch_size if is_training else args.per_device_eval_batch_size
             loader = DataLoader(
