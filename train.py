@@ -81,9 +81,12 @@ def main(args):
         specified in training_args.
     """
     set_seed(1)
-    
-    # Load all configurations in one place
-    task_config, policy_config, training_args, config_paths = load_all_configs(args)
+    # Load all configurations and merge all parameters using unified loader
+    cfg_loader = ConfigLoader(args=args, unknown_args=getattr(args, 'config_overrides', {}))
+    task_config, task_cfg_path = cfg_loader.load_task(args.task)
+    policy_config, policy_cfg_path = cfg_loader.load_policy(args.policy)
+    training_config, _, training_cfg_path = cfg_loader.load_training(getattr(args, 'training_cfg_path', args.training_config), hyper_args=args)
+    ConfigLoader.merge_all_parameters(task_config, policy_config, training_config, args)
     
     # Save policy metadata to output dir
     metadata_path = os.path.join(training_args.output_dir, 'policy_metadata.json')
@@ -127,14 +130,9 @@ def main(args):
         trainer.save_model(training_args.output_dir)
 
 if __name__ == '__main__':
-    args = parse_param()
-    
-    # Load configs to get training_args for output_dir setup
-    _, _, training_args, _ = load_all_configs(args)
-    
+    args, training_args = parse_param()
     os.makedirs(training_args.output_dir, exist_ok=True)
     all_ckpts = [os.path.join(training_args.output_dir, ckpt_name) for ckpt_name in os.listdir(training_args.output_dir) if ckpt_name.startswith('checkpoint-') and os.path.isdir(os.path.join(training_args.output_dir, ckpt_name))]
     if len(all_ckpts)==0: 
         training_args.resume_from_checkpoint = None
-    
-    main(args)
+    main(args, training_args)

@@ -9,6 +9,15 @@ import torch
 from torch.utils.data import Dataset, IterableDataset
 from typing import Dict, Optional, Any
 import copy
+from data_utils.normalize import ZScoreNormalizer, MinMaxNormalizer, PercentileNormalizer
+import dlimp as dl
+
+# TensorFlow imports for RLDS dataset handling
+try:
+    import tensorflow as tf
+    TF_AVAILABLE = True
+except ImportError:
+    TF_AVAILABLE = False
 
 
 class NormalizedMapDataset(Dataset):
@@ -218,13 +227,23 @@ def wrap_dataset_with_normalizers(
             dataset_name=dataset_name
         )
     elif has_iter:
-        # Iterable dataset
-        return NormalizedIterableDataset(
-            dataset=dataset,
-            action_normalizers=action_normalizers,
-            state_normalizers=state_normalizers,
-            dataset_name=dataset_name
-        )
+        # Check if this is an RLDS dataset (tf.data with dlimp Dataset)
+        if hasattr(dataset, 'dataset') and isinstance(dataset.dataset, dl.DLataset):
+            # This is an RLDS dataset, use TensorFlow pipeline for normalization
+            return _wrap_rlds_dataset_with_tf_normalizers(
+                dataset=dataset,
+                action_normalizers=action_normalizers,
+                state_normalizers=state_normalizers,
+                dataset_name=dataset_name
+            )
+        else:
+            # Regular iterable dataset
+            return NormalizedIterableDataset(
+                dataset=dataset,
+                action_normalizers=action_normalizers,
+                state_normalizers=state_normalizers,
+                dataset_name=dataset_name
+            )
     else:
         # Unknown dataset type, return as-is and let it fail later if needed
         import warnings
@@ -234,6 +253,141 @@ def wrap_dataset_with_normalizers(
             f"Returning unwrapped dataset."
         )
         return dataset
+
+
+def _wrap_rlds_dataset_with_tf_normalizers(
+    dataset,
+    action_normalizers: Optional[Dict] = None,
+    state_normalizers: Optional[Dict] = None,
+    dataset_name: Optional[str] = None
+):
+    """
+    Apply normalization to RLDS datasets using pure TensorFlow pipeline operations.
+    This function extracts normalization parameters outside the TF graph and creates a
+    pure TF function to be mapped onto the dataset, ensuring graph compatibility.
+    """
+    if not TF_AVAILABLE:
+        raise ImportError("TensorFlow is required for RLDS dataset normalization but is not available.")
+
+    action_normalizer = action_normalizers.get(dataset_name) if action_normalizers else None
+    state_normalizer = state_normalizers.get(dataset_name) if state_normalizers else None
+
+    if not action_normalizer and not state_normalizer:
+        return dataset
+
+    # --- Step 1: Extract and convert all parameters to TF constants outside the pipeline ---
+    # Assume float32 as the rlds_wrapper already casts actions to float32.
+    sample_dtype = tf.float32 
+    action_tf_params = _get_tf_norm_params(action_normalizer, 'action', sample_dtype) if action_normalizer else None
+    state_tf_params = _get_tf_norm_params(state_normalizer, 'state', sample_dtype) if state_normalizer else None
+
+    # --- Step 2: Define the pure TensorFlow function for the pipeline ---
+    def normalize_in_pipeline(sample):
+        """Pure TensorFlow function to normalize a single sample."""
+        if action_tf_params and 'action' in sample:
+            sample['action'] = _apply_tf_norm_from_tf_params(sample['action'], action_tf_params)
+        
+        if state_tf_params and 'state' in sample:
+            sample['state'] = _apply_tf_norm_from_tf_params(sample['state'], state_tf_params)
+        return sample
+
+    # --- Step 3: Apply the pure function to the dataset ---
+    dataset.dataset = dataset.dataset.map(
+        normalize_in_pipeline,
+        num_parallel_calls=tf.data.AUTOTUNE
+    )
+    
+    return dataset
+
+
+def _get_tf_norm_params(normalizer, data_type: str, sample_dtype=tf.float32) -> Optional[Dict]:
+    """
+    Extracts all necessary statistics from a normalizer object and converts them to
+    TensorFlow constants, ready to be used in a tf.data pipeline.
+    """
+    if not hasattr(normalizer, 'get_stat_by_key'):
+        return None
+
+    stats = normalizer.get_stat_by_key(data_type)
+    if not stats:
+        return None
+
+    # Map normalizer type string to a graph-compatible integer index
+    norm_type_str = str(normalizer)
+    type_map = {'zscore': 0, 'minmax': 1, 'percentile': 2}
+    type_index = type_map.get(norm_type_str, -1)  # -1 for identity/unsupported
+
+    params = {'type_index': tf.constant(type_index, dtype=tf.int32)}
+
+    # Convert stats to TF constants
+    for key in ['mean', 'std', 'min', 'max', 'q01', 'q99']:
+        if key in stats and stats[key] is not None:
+            params[key] = tf.constant(stats[key], dtype=sample_dtype)
+
+    # Extract mask_spec, NOT the mask itself
+    params['mask_spec'] = getattr(normalizer, 'mask_spec', None)
+    
+    # Convert other normalizer-specific parameters to TF constants
+    params['low'] = tf.constant(getattr(normalizer, 'low', 0.0), dtype=sample_dtype)
+    params['high'] = tf.constant(getattr(normalizer, 'high', 1.0), dtype=sample_dtype)
+    params['min_std'] = tf.constant(getattr(normalizer, 'min_std', 1e-8), dtype=sample_dtype)
+
+    return params
+
+
+def _apply_tf_norm_from_tf_params(data, tf_params: Dict):
+    """
+    Applies normalization using pre-extracted parameters (as TF constants) and pure
+    TensorFlow operations, including TF control flow.
+    """
+    # --- Dynamically build the mask inside the TF graph ---
+    mask = None
+    mask_spec = tf_params.get('mask_spec')
+    if mask_spec is not None:
+        feature_dim = tf.shape(data)[-1]
+        mask_spec_tensor = tf.constant(mask_spec)
+
+        if mask_spec_tensor.dtype == tf.bool:
+            tf.Assert(tf.equal(tf.shape(mask_spec_tensor)[0], feature_dim), ["Mask length mismatch"])
+            mask = mask_spec_tensor
+        else:
+            indices = tf.cast(mask_spec_tensor, dtype=tf.int32)
+            indices = tf.where(indices < 0, feature_dim + indices, indices)
+            mask = tf.tensor_scatter_nd_update(
+                tensor=tf.ones(shape=[feature_dim], dtype=tf.bool),
+                indices=tf.expand_dims(indices, axis=1),
+                updates=tf.zeros(tf.shape(indices), dtype=tf.bool)
+            )
+
+    # --- Define pure TF functions for each normalization type ---
+    def zscore_fn():
+        std = tf.clip_by_value(tf_params['std'], tf_params['min_std'], tf.float32.max)
+        return (data - tf_params['mean']) / (std + 1e-8)
+
+    def minmax_fn():
+        delta = tf_params['high'] - tf_params['low']
+        return (data - tf_params['min']) / (tf_params['max'] - tf_params['min'] + 1e-8) * delta + tf_params['low']
+
+    def percentile_fn():
+        delta = tf_params['high'] - tf_params['low']
+        normalized = (data - tf_params['q01']) / (tf_params['q99'] - tf_params['q01'] + 1e-8) * delta + tf_params['low']
+        return tf.clip_by_value(normalized, tf_params['low'], tf_params['high'])
+
+    # --- Use TF control flow to select the normalization branch ---
+    normalized = tf.switch_case(
+        branch_index=tf_params['type_index'],
+        branch_fns={
+            0: zscore_fn,
+            1: minmax_fn,
+            2: percentile_fn,
+        },
+        default=lambda: data  # Identity or unsupported
+    )
+
+    if mask is not None:
+        normalized = tf.where(mask, normalized, data)
+    
+    return normalized
 
 class WrappedDataset(Dataset):
     """Wrapper for map-style datasets"""

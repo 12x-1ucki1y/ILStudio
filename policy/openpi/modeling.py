@@ -80,7 +80,7 @@ class OpenPiPolicy(PreTrainedModel):
         if config.pytorch_weight_path is not None:
             model_path = os.path.join(config.pytorch_weight_path, "model.safetensors")
             safetensors.torch.load_model(
-                (self.model.module if isinstance(self.model, torch.nn.parallel.DistributedDataParallel) else self.model), model_path
+                (self.model.module if isinstance(self.model, torch.nn.parallel.DistributedDataParallel) else self.model), model_path, strict=False
             )
             logging.info(f"Loaded PyTorch weights from {config.pytorch_weight_path}")
     

@@ -452,7 +452,7 @@ def make_single_dataset(
     dataset = apply_frame_transforms(dataset, **frame_transform_kwargs, train=train)
 
     # this seems to reduce memory usage without affecting speed
-    dataset = dataset.with_ram_budget(1)
+    # dataset = dataset.with_ram_budget(1)
 
     # save for later
     return dataset, dataset_statistics["num_trajectories"], dataset_statistics
@@ -564,9 +564,11 @@ def make_interleaved_dataset(
         ).flatten(num_parallel_calls=threads)
         dataset = apply_per_dataset_frame_transforms(dataset, **dataset_frame_transform_kwargs)
         datasets.append(dataset)
-
-    # Interleave at the Frame Level
-    dataset: dl.DLataset = dl.DLataset.sample_from_datasets(datasets, sample_weights)
+    if len(datasets)==1: 
+        dataset = datasets[0]
+    else:
+        # Interleave at the Frame Level
+        dataset: dl.DLataset = dl.DLataset.sample_from_datasets(datasets, sample_weights)
 
     # Validation =>> fix a single shuffle buffer of data and cache it in RAM; prevents gradual memory increase!
     if not train:
@@ -574,7 +576,7 @@ def make_interleaved_dataset(
 
     # Shuffle the Dataset
     #   =>> IMPORTANT :: Shuffle AFTER .cache(), or else memory will still leak!
-    dataset = dataset.shuffle(shuffle_buffer_size)
+    # dataset = dataset.shuffle(shuffle_buffer_size)
 
     # Apply Frame Transforms
     overwatch.info("Applying frame transforms on dataset...")
@@ -588,6 +590,7 @@ def make_interleaved_dataset(
     dataset = dataset.with_ram_budget(1)
 
     # Save for Later
-    dataset.sample_weights = sample_weights
+    if len(datasets)>1:
+        dataset.sample_weights = sample_weights
 
     return dataset, dataset_len, all_dataset_statistics

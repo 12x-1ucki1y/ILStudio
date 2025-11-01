@@ -34,6 +34,7 @@ class LiberoEnv(MetaEnv):
         self.ctrl_type = getattr(self.config, 'ctrl_type', 'delta')
         self.camera_ids = getattr(self.config, 'camera_ids', [0,])
         self.use_openvla_gripper = getattr(self.config, 'use_openvla_gripper', True)
+        self.use_wrist = getattr(self.config, 'use_wrist', False)
         env = self.create_env()
         super().__init__(env)
         
@@ -85,11 +86,11 @@ class LiberoEnv(MetaEnv):
         state_joint = np.concatenate([obs["robot0_joint_pos"], gripper_state], axis=0).astype(np.float32)
         # image - apply camera selection based on camera_ids
         img_primary = obs["agentview_image"][::-1, ::-1]
-        img_second = obs['robot0_eye_in_hand_image']
-        all_imgs = [img_primary, img_second]
-        # Select images based on camera_ids configuration
-        selected_imgs = [all_imgs[i] for i in self.camera_ids if i < len(all_imgs)]
-        image = np.stack(selected_imgs)
+        all_imgs = [img_primary]
+        if self.use_wrist:
+            img_second = obs['robot0_eye_in_hand_image']
+            all_imgs.append(img_second)
+        image = np.stack(all_imgs)
         image = image.transpose(0, 3, 1, 2)
         # depth
         # depth_primary = obs["agentview_depth"][::-1, ::-1]
