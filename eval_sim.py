@@ -117,4 +117,3 @@ if __name__=='__main__':
         with open(env_res_file, 'w') as f:
             json.dump(eval_result, f)
 
-    

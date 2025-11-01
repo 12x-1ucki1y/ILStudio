@@ -576,7 +576,7 @@ def make_interleaved_dataset(
 
     # Shuffle the Dataset
     #   =>> IMPORTANT :: Shuffle AFTER .cache(), or else memory will still leak!
-    # dataset = dataset.shuffle(shuffle_buffer_size)
+    dataset = dataset.shuffle(shuffle_buffer_size)
 
     # Apply Frame Transforms
     overwatch.info("Applying frame transforms on dataset...")
@@ -587,7 +587,7 @@ def make_interleaved_dataset(
     #     dataset = dataset.batch(batch_size)
 
     # Note =>> Seems to reduce memory usage without affecting speed?
-    # dataset = dataset.with_ram_budget(1)
+    dataset = dataset.with_ram_budget(1)
 
     # Save for Later
     if len(datasets)>1:

@@ -5,10 +5,36 @@ import fnmatch
 import json
 import warnings
 import importlib
-from torch.utils.data import DataLoader, ConcatDataset
+import torch
 import torch.distributed as dist
+from torch.utils.data import DataLoader, ConcatDataset
 from .dataset_wrappers import WrappedDataset, WrappedIterableDataset, MapToIterableDataset
 from .normalize import NORMTYPE2CLASS, load_normalizers, save_norm_meta_to_json, load_normalizer_from_meta
+
+def safe_decode(value):
+    if isinstance(value, bytes):
+        return value.decode('utf-8')
+    elif isinstance(value, (int, np.integer)):
+        return str(int(value))
+    else:
+        return str(value)
+
+def convert_rlds_sample(data):
+    data_dict = dict(
+        raw_lang = safe_decode(data['raw_lang']),
+        image = torch.einsum('k h w c -> k c h w', torch.from_numpy(data['image'])),
+        state = torch.from_numpy(data['state']).float(),
+        action = torch.from_numpy(data['action']).float(),
+    )
+    if 'is_pad' in data:
+        data_dict['is_pad'] = torch.from_numpy(data['is_pad']).bool()
+    if 'timestamp' in data:
+        data_dict['timestamp'] = data['timestamp']
+    if 'episode_id' in data:
+        data_dict['episode_id'] = safe_decode(data['episode_id'])
+    if 'dataset_id' in data:
+        data_dict['dataset_id'] = safe_decode(data['dataset_id'])
+    return data_dict
 
 def is_distributed():
     return dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1

@@ -10,6 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
+            "justMyCode": false,  // ← 关键
             "env": {
                 "MUJOCO_GL": "egl",
                 "CUDA_VISIBLE_DEVICES": "0",
@@ -17,8 +18,14 @@
                 "ILSTD_CACHE": "/mnt/model/ilstd/data",
                 "HF_ENDPOINT": "https://hf-mirror.com",
             },
+            // "args": [
+            //     "-e", "libero_object_0", "-m", "localhost:5000", "--use_spawn", "-o", "results/asdjkhajkshckjj"
+            // ],
+            // "args": [ //train openpi full-finetune
+            //     "-t", "libero_object_rlds", "-p", "pi0_libero_object_full", "-o", "ckpt/openpi_debug_libero", "-c", "openpi_full"
+            // ],
             "args": [ // openpi policy server
-                "-m", "ckpt/pi0_libero_obj_full"
+                "-m", "ckpt/pi0_libero_obj_full/checkpoint-10000"
             ],
             // "args": [//robomimic+act
             //     "-t", "sim_transfer_cube_scripted", "-p", "act", "-o", "ckpt/actasdasdjaksdkl", "-c", "default"
@@ -32,9 +39,7 @@
             // "args": [
             //     "-t", "libero_object", "-p", "qwen25dp", "-c", "qwen25sp", "-o", "ckpt/qwen25sp5"
             // ],
-            // "args": [
-            //     "-e", "libero_object_0", "-m", "ckpt/act_debug_libero/checkpoint-30000", "--use_spawn", "-o", "results/act_asdwdj"
-            // ],
+
             // "args": [ // act + libero debug
             //     "--policy", "act_libero",
             //     "--task", "libero_object",
