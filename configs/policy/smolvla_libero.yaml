@@ -12,8 +12,8 @@ model_args:
   # Model architecture parameters
   model_type: "smolvla_policy"
   n_obs_steps: 1
-  chunk_size: 50
-  n_action_steps: 50
+  chunk_size: 16
+  n_action_steps: 16
   action_dim: 7
   state_dim: 8
   max_state_dim: 32
