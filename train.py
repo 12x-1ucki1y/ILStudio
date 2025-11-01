@@ -84,6 +84,9 @@ def main(args):
     
     # Load all configurations in one place
     task_config, policy_config, training_args, config_paths = load_all_configs(args)
+    os.makedirs(training_args.output_dir, exist_ok=True)
+    all_ckpts = [os.path.join(training_args.output_dir, ckpt_name) for ckpt_name in os.listdir(training_args.output_dir) if ckpt_name.startswith('checkpoint-') and os.path.isdir(os.path.join(training_args.output_dir, ckpt_name))]
+    if len(all_ckpts)==0: training_args.resume_from_checkpoint = None
     
     # Save policy metadata to output dir
     metadata_path = os.path.join(training_args.output_dir, 'policy_metadata.json')
@@ -128,13 +131,4 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_param()
-    
-    # Load configs to get training_args for output_dir setup
-    _, _, training_args, _ = load_all_configs(args)
-    
-    os.makedirs(training_args.output_dir, exist_ok=True)
-    all_ckpts = [os.path.join(training_args.output_dir, ckpt_name) for ckpt_name in os.listdir(training_args.output_dir) if ckpt_name.startswith('checkpoint-') and os.path.isdir(os.path.join(training_args.output_dir, ckpt_name))]
-    if len(all_ckpts)==0: 
-        training_args.resume_from_checkpoint = None
-    
     main(args)

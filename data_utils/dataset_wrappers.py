@@ -228,7 +228,7 @@ def wrap_dataset_with_normalizers(
         )
     elif has_iter:
         # Check if this is an RLDS dataset (tf.data with dlimp Dataset)
-        if hasattr(dataset, 'dataset') and isinstance(dataset.dataset, dl.dataset.Dataset):
+        if hasattr(dataset, 'dataset') and isinstance(dataset.dataset, dl.DLataset):
             # This is an RLDS dataset, use TensorFlow pipeline for normalization
             return _wrap_rlds_dataset_with_tf_normalizers(
                 dataset=dataset,

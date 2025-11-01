@@ -24,9 +24,9 @@
             // "args": [ //train openpi full-finetune
             //     "-t", "libero_object_rlds", "-p", "pi0_libero_object_full", "-o", "ckpt/openpi_debug_libero", "-c", "openpi_full"
             // ],
-            "args": [ // openpi policy server
-                "-m", "ckpt/pi0_libero_obj_full/checkpoint-10000"
-            ],
+            // "args": [ // openpi policy server
+            //     "-m", "ckpt/pi0_libero_obj_full/checkpoint-10000"
+            // ],
             // "args": [//robomimic+act
             //     "-t", "sim_transfer_cube_scripted", "-p", "act", "-o", "ckpt/actasdasdjaksdkl", "-c", "default"
             // ],
@@ -59,9 +59,9 @@
             // "args": [ // eval
             //     "--output_dir", "results/test_act_local","--model_name_or_path","ckpt/act_dataloader/checkpoint-100", "--use_spawn",
             // ],
-            // "args": [// bc-z
-            //     "-t", "bc_z", "-p", "act_bz", "-c", "debug", "-o", "ckpt/act_bc_z"
-            // ],
+            "args": [// bc-z
+                "-t", "bc_z", "-p", "act_openx", "-c", "debug", "-o", "ckpt/act_bc_z_norm"
+            ],
             // "args": [ // Qwen25VL+DP
             //     "-p", "qwen25dp", "-t", "sim_transfer_cube_scripted", "-c", "default", "-o", "ckpt/tmp_qqwen"
             // ],
