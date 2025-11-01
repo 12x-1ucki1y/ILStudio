@@ -33,11 +33,11 @@ class TrainingConfig:
         # Handle type conversions for common parameters
         processed_config = {}
         for key, value in config_data.items():
-            # Handle scientific notation strings that should be floats
-            if key in ['adam_epsilon', 'learning_rate', 'weight_decay', 'warmup_ratio'] and isinstance(value, str):
-                try:
+                # Handle scientific notation strings that should be floats
+                if key in ['adam_epsilon', 'learning_rate', 'weight_decay', 'warmup_ratio'] and isinstance(value, str):
+                    try:
                     processed_config[key] = float(value)
-                except ValueError:
+                    except ValueError:
                     print(f"Warning: Could not convert {key}='{value}' to float, keeping as string")
                     processed_config[key] = value
             else:
@@ -58,7 +58,7 @@ class TrainingConfig:
         
         # Create TrainingArguments - it will use default values for any missing parameters
         try:
-            return transformers.TrainingArguments(**config_dict)
+        return transformers.TrainingArguments(**config_dict)
         except TypeError as e:
             # If there are invalid parameters, filter them out and try again
             import inspect
