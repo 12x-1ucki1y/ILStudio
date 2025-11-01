@@ -53,6 +53,9 @@ def make_dataset_from_rlds(
     action_normalization_mask: Optional[List[bool]] = None,
     num_parallel_reads: int = tf.data.AUTOTUNE,
     num_parallel_calls: int = tf.data.AUTOTUNE,
+    # Distributed training parameters
+    num_shards: Optional[int] = None,
+    shard_index: Optional[int] = None,
 ) -> Tuple[dl.DLataset, dict]:
     """
     This function is responsible for loading a specific RLDS dataset from storage and getting it into a standardized
@@ -112,6 +115,9 @@ def make_dataset_from_rlds(
             it's always exactly 0 or 1. By default, all action dimensions are normalized.
         num_parallel_reads (int): number of parallel read workers. Default to AUTOTUNE.
         num_parallel_calls (int): number of parallel calls for traj_map operations. Default to AUTOTUNE.
+        num_shards (int, optional): Total number of shards for distributed training. If provided along with
+            shard_index, the dataset will be sharded for distributed training.
+        shard_index (int, optional): Index of the current shard (0-based). Must be provided along with num_shards.
     Returns:
         Dataset of trajectories where each step has the following fields:
         - observation:
@@ -239,6 +245,15 @@ def make_dataset_from_rlds(
         split = "train" if train else "val"
 
     dataset = dl.DLataset.from_rlds(builder, split=split, shuffle=shuffle, num_parallel_reads=num_parallel_reads)
+
+    # Apply sharding for distributed training (BEFORE any other transformations)
+    if num_shards is not None and shard_index is not None:
+        if not (0 <= shard_index < num_shards):
+            raise ValueError(f"shard_index ({shard_index}) must be in range [0, {num_shards})")
+        
+        # Use tf.data.experimental.AutoShardPolicy.FILE for efficient file-level sharding
+        # This is more efficient than element-level sharding as it avoids reading unnecessary files
+        dataset = dataset.shard(num_shards, shard_index)
 
     dataset = dataset.traj_map(restructure, num_parallel_calls)
     
@@ -471,6 +486,9 @@ def make_interleaved_dataset(
     balance_weights: bool = False,
     traj_transform_threads: Optional[int] = None,
     traj_read_threads: Optional[int] = None,
+    # Distributed training parameters
+    num_shards: Optional[int] = None,
+    shard_index: Optional[int] = None,
 ) -> dl.DLataset:
     """
     Creates an interleaved dataset from list of dataset configs (kwargs). Returns a dataset of batched frames.
@@ -494,6 +512,9 @@ def make_interleaved_dataset(
             datasets according to their sampling weights. If None, defaults to AUTOTUNE for every dataset.
         traj_read_threads: total number of parallel read workers for trajectory transforms, distributed across
             datasets according to their sampling weights. If None, defaults to AUTOTUNE for every dataset.
+        num_shards: Total number of shards for distributed training. If provided along with shard_index,
+            each dataset will be sharded for distributed training.
+        shard_index: Index of the current shard (0-based). Must be provided along with num_shards.
     """
     # Default to uniform sampling (if `sample_weights` is not specified)
     if not sample_weights:
@@ -555,6 +576,8 @@ def make_interleaved_dataset(
             num_parallel_calls=threads,
             num_parallel_reads=reads,
             dataset_statistics=all_dataset_statistics[dataset_kwargs["name"]],
+            num_shards=num_shards,
+            shard_index=shard_index,
         )
         dataset = apply_trajectory_transforms(
             dataset.repeat(),
@@ -576,7 +599,7 @@ def make_interleaved_dataset(
 
     # Shuffle the Dataset
     #   =>> IMPORTANT :: Shuffle AFTER .cache(), or else memory will still leak!
-    # dataset = dataset.shuffle(shuffle_buffer_size)
+    dataset = dataset.shuffle(shuffle_buffer_size)
 
     # Apply Frame Transforms
     overwatch.info("Applying frame transforms on dataset...")
@@ -587,7 +610,7 @@ def make_interleaved_dataset(
     #     dataset = dataset.batch(batch_size)
 
     # Note =>> Seems to reduce memory usage without affecting speed?
-    dataset = dataset.with_ram_budget(1)
+    # dataset = dataset.with_ram_budget(1)
 
     # Save for Later
     if len(datasets)>1:

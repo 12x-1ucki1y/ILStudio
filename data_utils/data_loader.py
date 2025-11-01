@@ -291,13 +291,7 @@ def get_dataloader(train_dataset, val_dataset=None, processor=None, collator=Non
         return _create_single_dataloader(train_dataset, processor, collator, args, is_training=True)
 
 def is_rlds_data(ds):
-    try:
-        from .datasets.rlds_wrapper import WrappedRLDSDataset
-        from .datasets.droid import DroidDataset
-        from .datasets.vlaos import VLAOSDataset
-    except:
-        return False
-    return isinstance(ds, WrappedRLDSDataset) or isinstance(ds, DroidDataset) or isinstance(ds, VLAOSDataset)
+    return hasattr(ds, 'dataset') and isinstance(ds.dataset, dl.DLataset)
 
 def is_map_data(dataset):
     return hasattr(dataset, '__len__') and hasattr(dataset, '__getitem__')
@@ -328,8 +322,8 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
         if hasattr(dataset, 'dataset') and is_rlds_data(dataset.dataset):
             # RLDS dataset
             # set tf data options here
-            
-            
+            dataset.dataset = dataset.dataset.prefetch(getattr(args, 'dataloader_prefetch_factor', 16))
+            dataset.dataset = dataset.dataset.with_ram_budget(1)
             wrapped_data = WrappedIterableDataset(dataset, processor)
             batch_size = args.per_device_train_batch_size if is_training else args.per_device_eval_batch_size
             loader = DataLoader(
@@ -392,7 +386,7 @@ def _create_mixed_dataloader(datasets, processor, collator, args, is_training=Tr
     # Mix map-style datasets using ConcatDataset
     if len(all_map_datasets)>0:
         mixed_map_data = torch.utils.data.ConcatDataset(all_map_datasets)
-        map_loader = _create_single_dataloader(dataset, processor, collator, args, is_training=is_training)
+        map_loader = _create_single_dataloader(mixed_map_data, processor, collator, args, is_training=is_training)
     else:
         map_loader = None
     # mix iterable datasets using huggingface's datasets
