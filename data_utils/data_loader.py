@@ -291,7 +291,7 @@ def get_dataloader(train_dataset, val_dataset=None, processor=None, collator=Non
         return _create_single_dataloader(train_dataset, processor, collator, args, is_training=True)
 
 def is_rlds_data(ds):
-    return hasattr(ds, 'dataset') and isinstance(ds.dataset, dl.DLataset)
+    return isinstance(ds, dl.DLataset)
 
 def is_map_data(dataset):
     return hasattr(dataset, '__len__') and hasattr(dataset, '__getitem__')
