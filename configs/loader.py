@@ -3,7 +3,7 @@ import yaml
 from pathlib import Path
 from typing import Tuple, Dict, Any, Optional
 
-from .utils import resolve_yaml, parse_overrides, apply_overrides_to_mapping, apply_overrides_to_object
+from .utils import resolve_yaml, parse_overrides, apply_overrides_to_mapping, apply_overrides_to_object, convert_yaml_string_types
 from .training.loader import load_training_config
 from data_utils.utils import _convert_to_type
 from types import SimpleNamespace
@@ -38,7 +38,13 @@ class ConfigLoader:
         path = self._resolve(category, name_or_path)
         with open(path, 'r') as f:
             cfg = yaml.safe_load(f) or {}
+        
+        # Convert string types in YAML (e.g., '1e-8' -> 1e-08)
+        convert_yaml_string_types(cfg)
+        
+        # Apply command-line overrides
         apply_overrides_to_mapping(cfg, self.get_overrides(category), _convert_to_type)
+        
         return cfg, path
 
     def load_task(self, name_or_path: str) -> Tuple[Dict[str, Any], str]:
@@ -85,17 +91,11 @@ class ConfigLoader:
         """Return (training_config_obj, training_args_obj, resolved_path)."""
         path = self._resolve('training', name_or_path)
         
-        # Load YAML config first as a dictionary
-        with open(path, 'r') as f:
-            import yaml
-            config_dict = yaml.safe_load(f) or {}
+        # Use from_yaml to load with proper type conversions
+        training_config = load_training_config(path)
         
-        # Apply overrides to the dictionary BEFORE creating TrainingConfig
-        apply_overrides_to_mapping(config_dict, self.get_overrides('training'), _convert_to_type)
-        
-        # Now create TrainingConfig with the overridden dictionary
-        from .training.loader import TrainingConfig
-        training_config = TrainingConfig(config_dict)
+        # Apply overrides to the config_dict (where parameters are actually stored)
+        apply_overrides_to_mapping(training_config.config_dict, self.get_overrides('training'), _convert_to_type)
         
         if hyper_args is None:
             hyper_args = self.args

@@ -96,6 +96,56 @@ def parse_overrides(unknown_args):
     return overrides
 
 
+def convert_yaml_string_types(config_dict):
+    """
+    Recursively convert string values in a config dict to appropriate types.
+    Handles scientific notation like '1e-8', numbers like '123', bools like 'true'.
+    
+    This is needed because yaml.safe_load() sometimes parses scientific notation
+    as strings (e.g., '1e-8' instead of 1e-08).
+    
+    Args:
+        config_dict: Configuration dictionary (modified in-place)
+    """
+    def convert_value(value):
+        """Convert a single value to appropriate type."""
+        if not isinstance(value, str):
+            return value
+        
+        # Check for boolean
+        if value.lower() in {"true", "false"}:
+            return value.lower() == "true"
+        
+        # Check for integer
+        if value.isdigit() or (value.startswith('-') and value[1:].isdigit()):
+            return int(value)
+        
+        # Check for float (including scientific notation)
+        try:
+            return float(value)
+        except ValueError:
+            # Keep as string if conversion fails
+            return value
+    
+    def recursive_convert(obj):
+        """Recursively convert all string values in nested dict/list structures."""
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if isinstance(value, str):
+                    obj[key] = convert_value(value)
+                elif isinstance(value, (dict, list)):
+                    recursive_convert(value)
+        elif isinstance(obj, list):
+            for i, item in enumerate(obj):
+                if isinstance(item, str):
+                    obj[i] = convert_value(item)
+                elif isinstance(item, (dict, list)):
+                    recursive_convert(item)
+    
+    recursive_convert(config_dict)
+    return config_dict
+
+
 def apply_overrides_to_mapping(mapping_obj, flat_overrides, caster):
     for dotted, raw in flat_overrides.items():
         if raw is None:
