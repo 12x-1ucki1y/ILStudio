@@ -9,7 +9,6 @@ import yaml
 import os
 from typing import Dict, Any, Optional
 from pathlib import Path
-from dataclasses import dataclass, field
 import transformers
 from ..utils import resolve_yaml
 
@@ -52,6 +51,11 @@ class TrainingConfig:
         
         # Add required parameters from hyper_args
         config_dict['output_dir'] = hyper_args.output_dir
+        
+        # Set default logging_dir if not explicitly set or if set to default value
+        if 'logging_dir' not in config_dict:
+            import os
+            config_dict['logging_dir'] = os.path.join(hyper_args.output_dir, 'log')
         
         # Apply overrides
         config_dict.update(overrides)
