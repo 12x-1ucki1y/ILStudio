@@ -79,7 +79,7 @@ num_train_epochs: 3
 max_steps: 30000
 
 # Batch sizes (typically determined by hardware)
-per_device_train_batch_size: 64
+per_device_train_batch_size: 32
 per_device_eval_batch_size: 32
 
 # Logging directory (defaults to output_dir/log if not set or set to "./logs")
@@ -88,3 +88,4 @@ logging_dir: "./logs"
 # Checkpoint resuming (often handled automatically)
 resume_from_checkpoint: True
 ddp_find_unused_parameters: True
+ignore_data_skip: True

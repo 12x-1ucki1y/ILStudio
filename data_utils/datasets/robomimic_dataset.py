@@ -13,7 +13,6 @@ from data_utils.datasets.base import EpisodicDataset
 MODALITIES = {
     "obs": {
         "low_dim": [
-            "object",
             "robot0_eef_pos",
             "robot0_eef_quat",
             "robot0_gripper_qpos",
@@ -37,14 +36,27 @@ class RobomimicDataset(EpisodicDataset):
     This class handles loading and processing of RoboMimic datasets,
     which include various manipulation tasks from the RoboMimic benchmark.
     """
-    
+    def __init__(self, *args, use_low_dim: bool = False, use_img: bool = True, use_wrist_img: bool = False, **kwargs):
+        self.use_low_dim = use_low_dim      
+        self.use_img = use_img
+        self.use_wrist_img = use_wrist_img
+        self.obs_key_shapes = None
+        self.task_name = None
+        self.low_dim_key = []
+        self.img_primary_key = []
+        self.img_wrist_key = []
+        super().__init__(*args, **kwargs)   
+        
     def initialize(self):
         """Initialize the RoboMimic dataset with sequence datasets."""
         from robomimic.utils.dataset import SequenceDataset
         import robomimic.utils.obs_utils as ObsUtils
-        
+        if self.use_low_dim: MODALITIES["obs"]["low_dim"] = ["object"] + MODALITIES["obs"]["low_dim"]
+        if self.use_img: MODALITIES["obs"]["rgb"].append("agentview_image")
+        if self.use_wrist_img: MODALITIES["obs"]["rgb"].append("robot0_eye_in_hand_image")
         ObsUtils.initialize_obs_utils_with_obs_specs(MODALITIES)
-        self._datasets = [SequenceDataset(**self.create_config(di)) for di in self.dataset_path_list if 'image' in di]
+        keyname = 'image' if self.use_img or self.use_wrist_img else 'low_dim'
+        self._datasets = [SequenceDataset(**self.create_config(di)) for di in self.dataset_path_list if keyname in di]
         self._languages = [self.get_raw_lang(di) for di in self.dataset_path_list if 'image' in di]
         self._dataset_dir = os.path.dirname(self.dataset_path_list[0])
         self.episode_ids = np.arange(sum(d.n_demos for d in self._datasets))
@@ -52,6 +64,8 @@ class RobomimicDataset(EpisodicDataset):
         self.episode_len = self.get_episode_len()  # Get length of each episode
         self.cumulative_len = np.cumsum(self.episode_len)  # Compute cumulative lengths
         self.max_episode_len = max(self.episode_len)  # Get maximum episode length
+        self.state_keys = self.get_state_keys(self.task_name)
+        self.camera_names = self.img_primary_key + self.img_wrist_key
 
     def get_dataset_dir(self):
         """Get the dataset directory path."""
@@ -81,7 +95,61 @@ class RobomimicDataset(EpisodicDataset):
             return ALL_ENV_LANGUAGES['TwoArmTransport']
         else:
             raise KeyError("Unknown language")
-        
+    
+    def get_state_keys(self, task_name):
+        state_keys = ['robot0_eef_pos', 'robot0_eef_quat', 'robot0_gripper_qpos']
+        if task_name=='transport':
+            state_keys = state_keys + ['robot1_eef_pos', 'robot1_eef_quat', 'robot1_gripper_qpos']
+        if self.use_low_dim:
+            state_keys = ['object'] + state_keys
+        return state_keys
+    
+    def get_obs_key_shapes(self, data_path):
+        obs_key_shapes_list = [
+            ('robot0_eef_pos', [3]), 
+            ('robot0_eef_quat', [4]), 
+            ('robot0_gripper_qpos', [2])
+        ]
+        # lift: ('object', [10]),  can: ('object', [14]),  square: ('object', [14]), tool_hang: ('object', [44]), transport: ('object', [41])
+        all_tasks = ['lift', 'can', 'square', 'tool_hang', 'transport']
+        task_name = None
+        for t in all_tasks:
+            if t in data_path:
+                task_name = t
+                break
+        if task_name is None: raise KeyError("Unknown task for obs_key_shapes")
+        self.task_name = None
+        if task_name=='transport':
+            obs_key_shapes_list = obs_key_shapes_list + [('robot1_eef_pos', [3]), ('robot1_eef_quat', [4]), ('robot1_gripper_qpos', [2])]
+            
+        # Init object obs
+        all_obj_shapes = {'lift': [10], 'can': [14], 'square': [14], 'tool_hang': [44], 'transport': [41]}
+        if self.use_low_dim:
+            obs_key_shapes_list = [('object', all_obj_shapes[task_name])] + obs_key_shapes_list
+            self.low_dim_key = ['object']
+
+        # Init image obs
+        if self.use_img:
+            if task_name in ['lift', 'can', 'square']:
+                obs_key_shapes_list = obs_key_shapes_list +  [('agentview_image', [3, 84, 84])]
+                self.img_primary_key = ['agentview_image']
+            elif task_name=='tool_hang':
+                obs_key_shapes_list = obs_key_shapes_list +  [('sideview_image', [3, 84, 84]),]
+                self.img_primary_key = ['sideview_image']
+            else:
+                obs_key_shapes_list = obs_key_shapes_list +  [('shouldercamera0_image', [3, 84, 84]), ('shouldercamera1_image', [3, 84, 84])]
+                self.img_primary_key = ['shouldercamera0_image', 'shouldercamera1_image']
+
+            
+        # Init wrist image obs
+        if self.use_wrist_img:
+            obs_key_shapes_list = obs_key_shapes_list + [('robot0_eye_in_hand_image', [3, 84, 84])]
+            self.img_wrist_key = ['robot0_eye_in_hand_image']
+            if task_name=='toolhang':
+                obs_key_shapes_list = obs_key_shapes_list + [('robot1_eye_in_hand_image', [3, 84, 84])]
+                self.img_wrist_key = ['robot0_eye_in_hand_image', 'robot1_eye_in_hand_image']
+        return OrderedDict(obs_key_shapes_list)
+    
     def create_config(self, data_path, filter_by_attribute='train', seq_length=1):
         """
         Create configuration for the RoboMimic sequence dataset.
@@ -94,16 +162,11 @@ class RobomimicDataset(EpisodicDataset):
         Returns:
             Dictionary containing the configuration
         """
-        obs_key_shapes = OrderedDict([
-            ('agentview_image', [3, 84, 84]), 
-            ('robot0_eef_pos', [3]), 
-            ('robot0_eef_quat', [4]), 
-            ('robot0_eye_in_hand_image', [3, 84, 84]), 
-            ('robot0_gripper_qpos', [2])
-        ])
+        if self.obs_key_shapes is None:
+            self.obs_key_shapes = self.get_obs_key_shapes(data_path)
         return {
             'hdf5_path': data_path,
-            'obs_keys': list(obs_key_shapes.keys()),
+            'obs_keys': list(self.obs_key_shapes.keys()),
             'dataset_keys': ('actions', 'rewards', 'dones'),
             'load_next_obs': False,
             'frame_stack': 1,
@@ -151,11 +214,9 @@ class RobomimicDataset(EpisodicDataset):
         # Load language 
         raw_lang = self._languages[eval(dataset_idx)]
         # Load state
-        state_euler = quat2axisangle(data['obs']['robot0_eef_quat'])
-        state_xyz = data['obs']['robot0_eef_pos']
-        gpos = data['obs']['robot0_gripper_qpos']
-        state_gripper = (gpos[:, 0] - gpos[:, 1])[:, np.newaxis]
-        state = np.concatenate([state_xyz, state_euler, state_gripper], axis=1)[0]
+        # 1. obj, 2. robot_k(xyz+axisangle+gripper)
+        all_states = [data['obs'][k] if 'quat' not in k else quat2axisangle(data['obs'][k]) for k in self.state_keys]
+        state = np.concatenate(all_states, axis=1)[0]
         # Load action
         if dataset.hdf5_cache_mode == 'all':
             demo_length = dataset._demo_id_to_demo_length[ep]
@@ -163,24 +224,14 @@ class RobomimicDataset(EpisodicDataset):
             action = np.concatenate([data['actions']] + [dataset[i]['actions'] for i in range(global_index + 1, global_index + chunk_size)], axis=0)
         else:
             action = data['actions'] if self.chunk_size == 1 else dataset.get_dataset_for_ep(ep=ep, key="actions")[start_ts:start_ts + self.chunk_size]
-        # action[:, :6] = action[:, :6] * np.array([0.05, 0.05, 0.05, 0.5, 0.5, 0.5])
-        # action[:, -1] = 0.5 * (1 - action[:, -1])
-        if self.ctrl_type == 'abs':
-            if dataset.hdf5_cache_mode == 'all':
-                next_data = [data] + [dataset[i] for i in range(global_index + 1, global_index + chunk_size)]
-                xyzs = np.concatenate([di['obs']['robot0_eef_pos'] for di in next_data], axis=0)
-                eulers = quat2axisangle(np.concatenate([di['obs']['robot0_eef_quat'] for di in next_data], axis=0))
-                states = np.concatenate([xyzs, eulers], axis=1)
-            else:
-                xyzs = dataset.get_dataset_for_ep(ep=ep, key="obs/robot0_eef_pos")[start_ts:start_ts + self.chunk_size]
-                eulers = quat2axisangle(dataset.get_dataset_for_ep(ep=ep, key="obs/robot0_eef_quat")[start_ts:start_ts + self.chunk_size]) 
-                states = np.concatenate([xyzs, eulers], axis=1)
-            action[:, :6] = action[:, :6] + states
         # Load image
-        image_dict = dict(
-            primary=data['obs']['agentview_image'][0],
-            wrist=data['obs']['robot0_eye_in_hand_image'][0],
-        )
+        image_dict = dict()
+        if self.use_img:
+            for i,k in enumerate(self.img_primary_key):
+                image_dict[k] = data['obs'][k][0]
+        if self.use_wrist_img:
+            for i,k in enumerate(self.img_wrist_key):
+                image_dict[k] = data['obs'][k][0]
         return dict(
             action=action,
             state=state,
@@ -222,27 +273,24 @@ class RobomimicDataset(EpisodicDataset):
         if 'language_instruction' in feats or len(feats) == 0: 
             data_dict['language_instruction'] = self._languages[dataset_idx]
         if 'state' in feats or len(feats) == 0: 
-            state_euler = quat2axisangle(trajectory_data['obs']['robot0_eef_quat'])
-            state_xyz = trajectory_data['obs']['robot0_eef_pos']
-            gpos = trajectory_data['obs']['robot0_gripper_qpos']
-            state_gripper = (gpos[:, 0] - gpos[:, 1])[:, np.newaxis]
-            state = np.concatenate([state_xyz, state_euler, state_gripper], axis=1)
+            all_states = [trajectory_data['obs'][k] if 'quat' not in k else quat2axisangle(trajectory_data['obs'][k]) for k in self.state_keys]
+            state = np.concatenate(all_states, axis=1)[0]
             data_dict['state'] = state
         if 'action' in feats or len(feats) == 0:  # Load action
             action = trajectory_data['actions']
-            # action[:, :6] = action[:, :6] * np.array([0.05, 0.05, 0.05, 0.5, 0.5, 0.5])
-            # action[:, -1] = 0.5 * (1 - action[:, -1])
             data_dict['action'] = action
         if 'image' in feats or len(feats) == 0:  # Load images
-            image_dict = dict(
-                primary=trajectory_data['obs']['agentview_image'],
-                wrist=trajectory_data['obs']['robot0_eye_in_hand_image']
-            )
+            image_dict = dict()
+            if self.use_img:
+                for i,k in enumerate(self.img_primary_key):
+                    image_dict[k] = data['obs'][k][0]
+            if self.use_wrist_img:
+                for i,k in enumerate(self.img_wrist_key):
+                    image_dict[k] = data['obs'][k][0]
             data_dict['image'] = image_dict
         return data_dict
 
-
 if __name__=='__main__':
-    ds = RobomimicDataset(['/inspire/hdd/project/robot-action/public/data/robomimic/square/ph'], ['primary'], 50, image_size=(256, 256))
-    d = next(iter(ds))
+    ds = RobomimicDataset(['/inspire/hdd/project/robot-action/public/data/robomimic/square/ph'], use_low_dim=True, use_img=False, image_size=(256, 256))
+    d = ds[0]
     print('ok')

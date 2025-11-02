@@ -28,10 +28,43 @@ class RobomimicEnv(MetaEnv):
         self.config = config
         self.ctrl_space = getattr(self.config, 'ctrl_space', 'ee')
         self.ctrl_type = getattr(self.config, 'ctrl_type', 'delta')
-        self.camera_ids = getattr(self.config, 'camera_ids', [0, 1])
+        self.use_low_dim = getattr(self.config, 'use_low_dim', False)
+        self.use_img = getattr(self.config, 'use_img', True)
+        self.use_wrist_img = getattr(self.config, 'use_wrist_img', False)
         env = self.create_env()
         super().__init__(env)
-        
+    
+    def get_state_keys(self, env_name):
+        state_keys = [
+            'robot0_eef_pos',
+            'robot0_eef_quat',
+            'robot0_gripper_qpos',
+        ]
+        if self.env_name=='TwoArmTransport':
+            state_keys += ['robot1_eef_pos', 'robot1_eef_quat', 'robot1_gripper_qpos']
+        if self.use_low_dim:
+            state_keys = ['object'] + state_keys
+        return state_keys
+    
+    def get_img_keys(self, env_name):
+        img_keys = []
+        if env_name in ['Lift', 'PickPlaceCan', 'NutAssemblySquare',]:
+            if self.use_img:
+                img_keys.append('agentview_image')
+            if self.use_wrist_img:
+                img_keys.append('robot0_eye_in_hand_image')
+        elif env_name in ['ToolHang',]:
+            if self.use_img:
+                img_keys.append('sideview_image')
+            if self.use_wrist_img:
+                img_keys.append('robot0_eye_in_hand_image') 
+        elif env_name=='TwoArmTransport':
+            if self.use_img:
+                img_keys.extend(['shouldercamera0_image', 'shouldercamera1_image'])
+            if self.use_wrist_img:
+                img_keys.extend(['robot0_eye_in_hand_image', 'robot1_eye_in_hand_image'])
+        return img_keys
+    
     def create_env(self):
         task_info = self.config.task.split('_')
         env_name, robot_name = task_info[0], task_info[1]
@@ -45,6 +78,8 @@ class RobomimicEnv(MetaEnv):
             use_image_obs=True,
             use_depth_obs=False,
         )
+        self.state_keys = self.get_state_keys(env_name)
+        self.img_keys = self.get_img_keys(env_name)
         modalities = {
             'obs':{
                 "low_dim": [x for x in env.base_env.observation_names if 'image' not in x and 'depth' not in x],
@@ -61,28 +96,17 @@ class RobomimicEnv(MetaEnv):
         assert maction['ctrl_space']==self.ctrl_space, f"The ctrl_space of MetaAction {maction['ctrl_space']} doesn't match the action space of environment {self.ctrl_space}"
         assert maction['ctrl_type']==self.ctrl_type, "Action must be delta action for LIBERO"
         actions = maction['action'] # (action_dim, )
-        # actions[:6] = actions[:6]/np.array([0.05, 0.05, 0.05, 0.5, 0.5, 0.5]) # Robosuite内部会乘上该缩放值实现控制，所以提前抵消该缩放值保证能够正确执行
-        # actions[6] = 1.-2.*actions[6]
         return actions
         
     def obs2meta(self, obs):
         # gripper state
-        gpos = obs['robot0_gripper_qpos']
-        gripper_state = np.array([(gpos[0]-gpos[1])]) # (1,)
-        # ee state
-        xyz = obs['robot0_eef_pos'] # (3,)
-        euler = quat2axisangle(obs['robot0_eef_quat']) # (3,)
-        state_ee = np.concatenate([xyz, euler, gripper_state], axis=0).astype(np.float32)
-        # joint state
-        state_joint = np.concatenate([obs["robot0_joint_pos"], gripper_state], axis=0).astype(np.float32)
+        all_states = [obs[k] if 'quat' not in k else quat2axisangle(obs[k]) for k in self.state_keys]
+        state_ee = np.concatenate(all_states, axis=0).astype(np.float32)
         # image - apply camera selection based on camera_ids
-        img_primary = obs["agentview_image"]
-        img_second = obs['robot0_eye_in_hand_image']
-        all_imgs = [img_primary, img_second]
-        # Select images based on camera_ids configuration
-        selected_imgs = [all_imgs[i] for i in self.camera_ids if i < len(all_imgs)]
-        image = np.stack(selected_imgs)
-        image = (image*255.0).astype(np.uint8)
+        all_imgs = [obs[k] for k in self.img_keys]
+        image = np.stack(all_imgs)
+        if np.max(image)<=1.0:
+            image = (image*255.0).astype(np.uint8)
         return MetaObs(state=state_ee, image=image, raw_lang=self.raw_lang)
 
     def step(self, *args, **kwargs):

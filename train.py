@@ -12,7 +12,10 @@ from policy.policy_loader import (
     load_policy_model_for_training,
 )
 from policy.trainer import BaseTrainer
-
+import torch
+import numpy
+torch.serialization.add_safe_globals([numpy.core.multiarray._reconstruct])
+torch.serialization.safe_globals([numpy.core.multiarray._reconstruct])
 
 def parse_param():
     """
