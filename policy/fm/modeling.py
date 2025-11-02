@@ -1,15 +1,73 @@
+"""
+Flow Matching Policy Implementation
+
+A simple and efficient implementation of Flow Matching for robot policy learning.
+Based on Conditional Flow Matching (Lipman et al., 2023).
+"""
+
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import torch.utils.data as data
-import torch.nn.functional as F  # <-- MOVED: Fixed the import error
-from torchdiffeq import odeint
+import torch.nn.functional as F
+from transformers import PreTrainedModel, PretrainedConfig
+from typing import Optional, Dict, Any
+import numpy as np
 
-# --- 1. Time Embedding ---
-# Same as in Transformers and Diffusion models, used to encode scalar time t into a vector
+# Try to import torchdiffeq for ODE solving
+try:
+    from torchdiffeq import odeint
+    HAS_TORCHDIFFEQ = True
+except ImportError:
+    HAS_TORCHDIFFEQ = False
+    print("Warning: torchdiffeq not available, will use Euler method for sampling")
+
+
+# ============================================================================
+# Configuration
+# ============================================================================
+
+class FlowMatchingConfig(PretrainedConfig):
+    """Configuration for Flow Matching Policy."""
+    
+    model_type = "flow_matching_policy"
+    
+    def __init__(
+        self,
+        state_dim: int = 10,
+        action_dim: int = 7,
+        time_dim: int = 64,
+        hidden_dim: int = 256,
+        num_layers: int = 3,
+        learning_rate: float = 1e-4,
+        # Chunk settings (for action chunking)
+        chunk_size: int = 1,
+        # Sampling settings
+        num_sampling_steps: int = 100,
+        use_ode_solver: bool = True,
+        ode_atol: float = 1e-5,
+        ode_rtol: float = 1e-5,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.time_dim = time_dim
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.learning_rate = learning_rate
+        self.chunk_size = chunk_size
+        self.num_sampling_steps = num_sampling_steps
+        self.use_ode_solver = use_ode_solver and HAS_TORCHDIFFEQ
+        self.ode_atol = ode_atol
+        self.ode_rtol = ode_rtol
+
+
+# ============================================================================
+# Time Embedding
+# ============================================================================
 
 class SinusoidalTimeEmbedding(nn.Module):
-    """Sinusoidal time embedding."""
+    """Sinusoidal time embedding for encoding time steps."""
+    
     def __init__(self, dim: int, max_time: float = 1.0):
         super().__init__()
         if dim % 2 != 0:
@@ -17,289 +75,347 @@ class SinusoidalTimeEmbedding(nn.Module):
         self.dim = dim
         self.max_time = max_time
         
-        # Calculate log(10000) / (dim/2 - 1)
+        # Pre-compute frequency terms
         half_dim = dim // 2
-        div_term = torch.exp(torch.arange(half_dim, dtype=torch.float32) *
-                             -(torch.log(torch.tensor(10000.0)) / (half_dim - 1.0)))
+        div_term = torch.exp(
+            torch.arange(half_dim, dtype=torch.float32) *
+            -(torch.log(torch.tensor(10000.0)) / (half_dim - 1.0))
+        )
         self.register_buffer('div_term', div_term)
 
     def forward(self, t: torch.Tensor) -> torch.Tensor:
         """
-        Input:
-            t: [B, 1] or [B] or scalar, time steps in [0, max_time]
-        Output:
-            emb: [B, D]
+        Args:
+            t: Time tensor of shape [B] or [B, 1]
+        
+        Returns:
+            Time embedding of shape [B, dim]
         """
         t = t.float().view(-1, 1) / self.max_time
-        pe = torch.zeros(t.shape[0], self.dim, device=t.device)
+        pe = torch.zeros(t.shape[0], self.dim, device=t.device, dtype=t.dtype)
         pe[:, 0::2] = torch.sin(t * self.div_term)
         pe[:, 1::2] = torch.cos(t * self.div_term)
         return pe
 
-# --- 2. Velocity Field Model (Velocity Model) ---
-# This is our core neural network v_theta(a_t, t, s)
+
+# ============================================================================
+# Velocity Model
+# ============================================================================
 
 class VelocityModel(nn.Module):
-    def __init__(self, state_dim: int, action_dim: int, time_dim: int = 64, hidden_dim: int = 256):
+    """
+    Neural network that predicts velocity field v_theta(a_t, t, s).
+    
+    This is the core network that learns to transform noise to actions
+    conditioned on the state.
+    """
+    
+    def __init__(
+        self,
+        state_dim: int,
+        action_dim: int,
+        time_dim: int = 64,
+        hidden_dim: int = 256,
+        num_layers: int = 3
+    ):
         super().__init__()
         
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.time_dim = time_dim
+        
+        # Time embedding
         self.time_embed = SinusoidalTimeEmbedding(time_dim)
         
-        # Concatenate (action, time_emb, state) as input
+        # Input: concatenate (action_t, time_embedding, state)
         input_dim = action_dim + time_dim + state_dim
         
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.SiLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.SiLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.SiLU(),
-            nn.Linear(hidden_dim, action_dim) # Output velocity, same dimension as action
-        )
+        # Build MLP layers
+        layers = []
+        prev_dim = input_dim
+        
+        for i in range(num_layers):
+            layers.append(nn.Linear(prev_dim, hidden_dim))
+            layers.append(nn.SiLU())
+            prev_dim = hidden_dim
+        
+        # Output layer
+        layers.append(nn.Linear(hidden_dim, action_dim))
+        
+        self.net = nn.Sequential(*layers)
         
     def forward(self, a_t: torch.Tensor, t: torch.Tensor, s: torch.Tensor) -> torch.Tensor:
         """
-        Input:
-            a_t: [B, action_dim], Action state at time t
-            t: [B] or scalar, Time t
-            s: [B, state_dim], Conditional state (proprioception)
-        Output:
-            v: [B, action_dim], Predicted velocity
+        Predict velocity at time t.
+        
+        Args:
+            a_t: Action at time t, shape [B, action_dim]
+            t: Time step(s), shape [B] or scalar
+            s: State condition, shape [B, state_dim]
+        
+        Returns:
+            Predicted velocity, shape [B, action_dim]
         """
+        # Handle scalar time
         if t.dim() == 0:
-            # Expand scalar t to batch size
             t = t.expand(a_t.shape[0])
-            
+        
+        # Get time embedding
         t_emb = self.time_embed(t)
         
-        # Concatenate inputs
+        # Concatenate all inputs
         x = torch.cat([a_t, t_emb, s], dim=-1)
         
-        return self.net(x)
+        # Predict velocity
+        v = self.net(x)
+        
+        return v
 
-# --- 3. Flow Matching Policy ---
 
-class FlowMatchingPolicy(nn.Module):
-    def __init__(self, state_dim: int, action_dim: int, 
-                 time_dim: int = 64, hidden_dim: int = 256, 
-                 lr: float = 1e-4):
-        super().__init__()
-        self.state_dim = state_dim
-        self.action_dim = action_dim
+# ============================================================================
+# Flow Matching Policy
+# ============================================================================
+
+class FlowMatchingPolicy(PreTrainedModel):
+    """
+    Flow Matching Policy for Imitation Learning.
+    
+    Uses Conditional Flow Matching to learn a policy that maps states to actions
+    by learning to transform Gaussian noise to expert actions.
+    """
+    
+    config_class = FlowMatchingConfig
+    
+    def __init__(self, config: FlowMatchingConfig):
+        super().__init__(config)
         
-        # Initialize the velocity model
-        self.model = VelocityModel(state_dim, action_dim, time_dim, hidden_dim)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
+        self.config = config
+        self.state_dim = config.state_dim
+        self.action_dim = config.action_dim
+        self.chunk_size = config.chunk_size
         
-    def _get_train_loss(self, s: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        # Initialize velocity model
+        self.velocity_model = VelocityModel(
+            state_dim=config.state_dim,
+            action_dim=config.action_dim * config.chunk_size,  # Support action chunking
+            time_dim=config.time_dim,
+            hidden_dim=config.hidden_dim,
+            num_layers=config.num_layers
+        )
+        
+        # Initialize optimizer (can be overridden by Trainer)
+        self.optimizer = None
+    
+    def forward(
+        self,
+        state: torch.Tensor,
+        action: Optional[torch.Tensor] = None,
+        **kwargs
+    ) -> Dict[str, torch.Tensor]:
         """
-        Calculates the CFM training loss (L_FM)
+        Forward pass for training or inference.
         
-        Input:
-            s: [B, state_dim], Expert state
-            a: [B, action_dim], Expert action
-        Output:
-            loss: Scalar loss value
+        Args:
+            state: State tensor, shape [B, state_dim]
+            action: Ground truth action (for training), shape [B, action_dim] or [B, chunk_size, action_dim]
+            
+        Returns:
+            Dictionary containing:
+                - loss: Training loss (if action is provided)
+                - action: Sampled action (if action is not provided)
         """
-        batch_size = s.shape[0]
-        device = s.device
+        if action is not None:
+            # Training mode
+            if action.dim() == 3:  # [B, chunk_size, action_dim]
+                action = action.reshape(action.shape[0], -1)  # [B, chunk_size * action_dim]
+            
+            loss = self._compute_flow_matching_loss(state, action)
+            return {'loss': loss}
+        else:
+            # Inference mode
+            sampled_action = self.select_action(state)
+            return {'action': sampled_action}
+    
+    def _compute_flow_matching_loss(
+        self,
+        state: torch.Tensor,
+        action: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Compute Flow Matching loss.
         
-        # 1. Sample t ~ U[0, 1]
-        # For numerical stability, we sample t ~ U[epsilon, 1]
+        The loss is: E_{t, z} ||v_theta(a_t, t, s) - (a_1 - a_0)||^2
+        where a_t = t * a_1 + (1-t) * a_0, a_0 ~ N(0, I), a_1 = action
+        
+        Args:
+            state: State tensor, shape [B, state_dim]
+            action: Target action, shape [B, action_dim * chunk_size]
+        
+        Returns:
+            Scalar loss
+        """
+        batch_size = state.shape[0]
+        device = state.device
+        
+        # Sample time uniformly from [epsilon, 1] for numerical stability
         epsilon = 1e-5
         t = torch.rand(batch_size, device=device) * (1.0 - epsilon) + epsilon
         
-        # 2. Sample z (a_0) ~ N(0, I)
-        z = torch.randn_like(a)
+        # Sample noise (initial state a_0)
+        noise = torch.randn_like(action)
         
-        # 3. Calculate a_t = t*a + (1-t)*z
-        a_t = t.view(-1, 1) * a + (1.0 - t.view(-1, 1)) * z
+        # Interpolate: a_t = t * action + (1-t) * noise
+        t_expanded = t.view(-1, 1)
+        a_t = t_expanded * action + (1.0 - t_expanded) * noise
         
-        # 4. Calculate target velocity u_t = a - z
-        u_t = a - z
+        # Target velocity is the difference: u_t = action - noise
+        u_t = action - noise
         
-        # 5. Predict velocity v_theta
-        v_pred = self.model(a_t, t, s)
+        # Predict velocity
+        v_pred = self.velocity_model(a_t, t, state)
         
-        # 6. Calculate MSE loss ||v_pred - u_t||^2
+        # Compute MSE loss
         loss = F.mse_loss(v_pred, u_t)
         
         return loss
-
-    def train_step(self, batch: tuple) -> float:
-        """
-        Execute one training step
-        """
-        s, a = batch
-        s = s.to(next(self.parameters()).device)
-        a = a.to(next(self.parameters()).device)
-        
-        self.optimizer.zero_grad()
-        loss = self._get_train_loss(s, a)
-        loss.backward()
-        self.optimizer.step()
-        
-        return loss.item()
-
-    # --- Inference (Sampling) ---
     
     @torch.no_grad()
-    def select_action(self, s: torch.Tensor) -> torch.Tensor:
+    def select_action(self, state: torch.Tensor) -> np.ndarray:
         """
-        Sample action using an ODE solver (recommended method)
+        Sample action using the learned flow.
         
-        Input:
-            s: [B, state_dim], Current state
-        Output:
-            a_1: [B, action_dim], Sampled action
+        Args:
+            state: State tensor, shape [B, state_dim]
+        
+        Returns:
+            Sampled action as numpy array, shape [B, chunk_size, action_dim]
         """
-        self.model.eval() # Switch to evaluation mode
-        device = s.device
-        batch_size = s.shape[0]
+        self.eval()
         
-        # 1. Define the ODE function (this is the format required by torchdiffeq)
-        # We need a helper class to pass the model and state s
+        if self.config.use_ode_solver and HAS_TORCHDIFFEQ:
+            action = self._sample_ode(state)
+        else:
+            action = self._sample_euler(state)
+        
+        self.train()
+        
+        # Reshape to [B, chunk_size, action_dim]
+        batch_size = state.shape[0]
+        action = action.reshape(batch_size, self.chunk_size, self.action_dim)
+        
+        return action.cpu().numpy()
+    
+    def _sample_ode(self, state: torch.Tensor) -> torch.Tensor:
+        """
+        Sample action using ODE solver (more accurate).
+        
+        Args:
+            state: State tensor, shape [B, state_dim]
+        
+        Returns:
+            Sampled action, shape [B, action_dim * chunk_size]
+        """
+        device = state.device
+        batch_size = state.shape[0]
+        action_dim_total = self.action_dim * self.chunk_size
+        
+        # Define ODE function
         class ODEFunc(nn.Module):
-            def __init__(self, model, state):
+            def __init__(self, velocity_model, state):
                 super().__init__()
-                self.model = model
+                self.velocity_model = velocity_model
                 self.state = state
-
+            
             def forward(self, t, a_t):
-                # t is the current time scalar, a_t is [B, action_dim]
-                # model needs (a_t, t, s)
-                return self.model(a_t, t, self.state)
+                return self.velocity_model(a_t, t, self.state)
         
-        ode_func = ODEFunc(self.model, s)
-
-        # 2. Sample a_0 from N(0, I)
-        a_0 = torch.randn(batch_size, self.action_dim, device=device)
+        ode_func = ODEFunc(self.velocity_model, state)
         
-        # 3. Define integration time span [0, 1]
+        # Initial condition: sample from N(0, I)
+        a_0 = torch.randn(batch_size, action_dim_total, device=device)
+        
+        # Time span [0, 1]
         t_span = torch.tensor([0.0, 1.0], device=device)
         
-        # 4. Solve the ODE
-        # odeint returns [T, B, action_dim]
-        # We only need the solution at T=2 points (0 and 1)
+        # Solve ODE
         solution = odeint(
             ode_func,
             a_0,
             t_span,
-            method='dopri5', # A robust adaptive solver
-            atol=1e-5,
-            rtol=1e-5
+            method='dopri5',
+            atol=self.config.ode_atol,
+            rtol=self.config.ode_rtol
         )
         
-        # 5. Return the solution at t=1
-        a_1 = solution[1]
+        # Return solution at t=1
+        a_1 = solution[-1]
         
-        self.model.train() # Switch back to training mode
         return a_1
-
-    @torch.no_grad()
-    def select_action_euler(self, s: torch.Tensor, num_steps: int = 100) -> torch.Tensor:
+    
+    def _sample_euler(
+        self,
+        state: torch.Tensor,
+        num_steps: Optional[int] = None
+    ) -> torch.Tensor:
         """
-        Sample action using simple Euler method (for demonstration, fast but less precise)
+        Sample action using Euler method (faster but less accurate).
         
-        Input:
-            s: [B, state_dim]
-            num_steps: Integration steps
-        Output:
-            a_T: [B, action_dim]
+        Args:
+            state: State tensor, shape [B, state_dim]
+            num_steps: Number of integration steps (uses config value if None)
+        
+        Returns:
+            Sampled action, shape [B, action_dim * chunk_size]
         """
-        self.model.eval()
-        device = s.device
-        batch_size = s.shape[0]
+        if num_steps is None:
+            num_steps = self.config.num_sampling_steps
+        
+        device = state.device
+        batch_size = state.shape[0]
+        action_dim_total = self.action_dim * self.chunk_size
         
         dt = 1.0 / num_steps
         
-        # Start from N(0, I)
-        a_t = torch.randn(batch_size, self.action_dim, device=device)
+        # Start from noise
+        a_t = torch.randn(batch_size, action_dim_total, device=device)
         
+        # Euler integration
         for i in range(num_steps):
             t = torch.tensor(i * dt, device=device)
-            # Euler step: a_{t+dt} = a_t + v(a_t, t, s) * dt
-            v = self.model(a_t, t, s)
+            v = self.velocity_model(a_t, t, state)
             a_t = a_t + v * dt
-            
-        self.model.train()
+        
         return a_t
-
-
-# --- 4. Training and Inference Demo ---
-
-if __name__ == "__main__":
     
-    # --- A. Setup ---
-    # Define dimensions
-    STATE_DIM = 10   # e.g.: 10-joint proprioceptive state
-    ACTION_DIM = 4   # e.g.: 4-joint motor command
-    BATCH_SIZE = 64
-    TRAIN_STEPS = 1000
+    def train_step(self, batch: Dict[str, torch.Tensor]) -> float:
+        """
+        Execute one training step.
+        
+        Args:
+            batch: Dictionary containing 'state' and 'action'
+        
+        Returns:
+            Loss value
+        """
+        if self.optimizer is None:
+            raise RuntimeError("Optimizer not set. Call set_optimizer() first.")
+        
+        state = batch['state']
+        action = batch['action']
+        
+        # Forward pass
+        output = self.forward(state=state, action=action)
+        loss = output['loss']
+        
+        # Backward pass
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        
+        return loss.item()
     
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # --- B. Create Dummy Dataset (Imitation Learning) ---
-    # In a real application, this is where you load your expert data
-    # We create data such that action = state[:4] * 0.5 + noise
-    print("Creating dummy dataset...")
-    num_samples = BATCH_SIZE * TRAIN_STEPS
-    expert_states = torch.randn(num_samples, STATE_DIM)
-    # Simulate expert actions
-    expert_actions = (expert_states[:, :ACTION_DIM] * 0.5 + 
-                      torch.randn(num_samples, ACTION_DIM) * 0.1) 
-
-    dataset = data.TensorDataset(expert_states, expert_actions)
-    dataloader = data.DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
-
-    # --- C. Initialize Policy Model ---
-    policy = FlowMatchingPolicy(STATE_DIM, ACTION_DIM).to(device)
-
-    # --- D. Training Loop ---
-    print(f"Start training on {device}...")
-    step = 0
-    done = False
-    while not done:
-        for batch in dataloader:
-            if step >= TRAIN_STEPS:
-                done = True
-                break
-                
-            loss = policy.train_step(batch)
-            
-            if step % 100 == 0:
-                print(f"Step {step}/{TRAIN_STEPS}, Loss: {loss:.6f}")
-            step += 1
-    
-    print("Training finished.")
-
-    # --- E. Inference Demo ---
-    print("\n--- Inference Demo ---")
-    
-    # Get a virtual current state
-    # (In a real application, this would be the true state from your environment)
-    test_state = torch.randn(1, STATE_DIM).to(device)
-    print(f"Test State shape: {test_state.shape}")
-    
-    # 1. Using torchdiffeq (recommended)
-    # Sample 1 action
-    sampled_action_ode = policy.select_action(test_state)
-    print(f"Sampled Action (odeint) shape: {sampled_action_ode.shape}")
-    print(f"Action (odeint): {sampled_action_ode.cpu().numpy()}")
-
-    # Sample 8 actions (demonstrating batching)
-    test_states_batch = torch.randn(8, STATE_DIM).to(device)
-    sampled_actions_ode_batch = policy.select_action(test_states_batch)
-    print(f"Batch Action (odeint) shape: {sampled_actions_ode_batch.shape}")
-
-
-    # 2. Using manual Euler (for comparison)
-    sampled_action_euler = policy.select_action_euler(test_state, num_steps=100)
-    print(f"\nSampled Action (Euler) shape: {sampled_action_euler.shape}")
-    print(f"Action (Euler): {sampled_action_euler.cpu().numpy()}")
-
-    # Theoretically, the two actions should be similar, 
-    # as they are sampling from the same learned distribution
-    diff = torch.norm(sampled_action_ode - sampled_action_euler)
-    print(f"\nDifference between odeint and Euler: {diff.item():.4f}")
+    def set_optimizer(self, lr: Optional[float] = None):
+        """Set up optimizer."""
+        if lr is None:
+            lr = self.config.learning_rate
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
