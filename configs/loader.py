@@ -84,9 +84,19 @@ class ConfigLoader:
     def load_training(self, name_or_path: str, hyper_args=None):
         """Return (training_config_obj, training_args_obj, resolved_path)."""
         path = self._resolve('training', name_or_path)
-        training_config = load_training_config(path)
-        # apply overrides to object
-        apply_overrides_to_object(training_config, self.get_overrides('training'), _convert_to_type)
+        
+        # Load YAML config first as a dictionary
+        with open(path, 'r') as f:
+            import yaml
+            config_dict = yaml.safe_load(f) or {}
+        
+        # Apply overrides to the dictionary BEFORE creating TrainingConfig
+        apply_overrides_to_mapping(config_dict, self.get_overrides('training'), _convert_to_type)
+        
+        # Now create TrainingConfig with the overridden dictionary
+        from .training.loader import TrainingConfig
+        training_config = TrainingConfig(config_dict)
+        
         if hyper_args is None:
             hyper_args = self.args
         training_args = training_config.to_training_arguments(hyper_args)
