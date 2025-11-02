@@ -82,7 +82,7 @@ max_steps: 30000
 per_device_train_batch_size: 64
 per_device_eval_batch_size: 32
 
-# Logging directory (often derived from output_dir)
+# Logging directory (defaults to output_dir/log if not set or set to "./logs")
 logging_dir: "./logs"
 
 # Checkpoint resuming (often handled automatically)
