@@ -280,7 +280,7 @@ class FlowMatchingPolicy(PreTrainedModel):
         return loss
     
     @torch.no_grad()
-    def select_action(self, state: torch.Tensor) -> np.ndarray:
+    def select_action(self, obs) -> np.ndarray:
         """
         Sample action using the learned flow.
         
@@ -291,7 +291,8 @@ class FlowMatchingPolicy(PreTrainedModel):
             Sampled action as numpy array, shape [B, chunk_size, action_dim]
         """
         self.eval()
-        
+        state = obs['state']
+        state = torch.from_numpy(state).to('cuda')
         if self.config.use_ode_solver and HAS_TORCHDIFFEQ:
             action = self._sample_ode(state)
         else:

@@ -67,8 +67,6 @@ max_steps: 1000
 per_device_train_batch_size: 2
 per_device_eval_batch_size: 2
 
-# Logging directory
-logging_dir: "./logs"
 
 # Checkpoint resuming
 resume_from_checkpoint: true

@@ -30,7 +30,7 @@ model_args:
   train_state_proj: true
   
   # VLM model configuration
-  vlm_model_name: "HuggingFaceTB/SmolVLM2-500M-Video-Instruct"
+  vlm_model_name: "/inspire/hdd/project/robot-action/public/models/models--HuggingFaceTB--SmolVLM2-500M-Video-Instruct/snapshots/7b375e1b73b11138ff12fe22c8f2822d8fe03467/"
   load_vlm_weights: false
   add_image_special_tokens: false
   attention_mode: "cross_attn"

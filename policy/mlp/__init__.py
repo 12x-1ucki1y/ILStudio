@@ -39,18 +39,9 @@ def load_model(args):
             else:
                 # Default assumption for debugging (can be overridden)
                 image_dim = 3 * 224 * 224  # Default RGB image
-        
+        model_args['image_dim'] = image_dim
         # Extract configuration parameters
         config = MLPPolicyConfig(
-            state_dim=getattr(args, 'state_dim', 14),
-            action_dim=getattr(args, 'action_dim', 14),
-            num_layers=getattr(args, 'num_layers', 3),
-            hidden_dim=getattr(args, 'hidden_dim', 256),
-            activation=getattr(args, 'activation', 'relu'),
-            dropout=getattr(args, 'dropout', 0.0),
-            use_camera=getattr(args, 'use_camera', False),
-            image_dim=image_dim,
-            chunk_size=getattr(args, 'chunk_size', 1),
             **model_args
         )
         

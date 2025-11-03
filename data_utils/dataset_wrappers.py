@@ -9,11 +9,11 @@ import torch
 from torch.utils.data import Dataset, IterableDataset
 from typing import Dict, Optional, Any
 import copy
-from data_utils.normalize import ZScoreNormalizer, MinMaxNormalizer, PercentileNormalizer
-import dlimp as dl
 
+from data_utils.normalize import ZScoreNormalizer, MinMaxNormalizer, PercentileNormalizer
 # TensorFlow imports for RLDS dataset handling
 try:
+    import dlimp as dl
     import tensorflow as tf
     TF_AVAILABLE = True
 except ImportError:
@@ -300,11 +300,12 @@ def _wrap_rlds_dataset_with_tf_normalizers(
     return dataset
 
 
-def _get_tf_norm_params(normalizer, data_type: str, sample_dtype=tf.float32) -> Optional[Dict]:
+def _get_tf_norm_params(normalizer, data_type: str, sample_dtype=None) -> Optional[Dict]:
     """
     Extracts all necessary statistics from a normalizer object and converts them to
     TensorFlow constants, ready to be used in a tf.data pipeline.
     """
+    if sample_dtype is None: sample_dtype = tf.float32
     if not hasattr(normalizer, 'get_stat_by_key'):
         return None
 

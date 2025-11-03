@@ -84,7 +84,6 @@ per_device_train_batch_size: 32
 per_device_eval_batch_size: 32
 
 # Logging directory (often derived from output_dir)
-logging_dir: "./logs/act_robomimic_bs32"
 
 # Checkpoint resuming (often handled automatically)
 resume_from_checkpoint: True

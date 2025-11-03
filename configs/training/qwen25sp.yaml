@@ -82,8 +82,6 @@ max_steps: 100000
 per_device_train_batch_size: 32
 per_device_eval_batch_size: 32
 
-# Logging directory (often derived from output_dir)
-logging_dir: "./logs/qwen25dp_libero_sp"
 
 # Checkpoint resuming (often handled automatically)
 resume_from_checkpoint: True

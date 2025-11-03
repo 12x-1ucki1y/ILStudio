@@ -3,7 +3,7 @@ import numpy as np
 import os 
 
 class D4RLDataset(EpisodicDataset):
-    def __init__(self, dataset_path_list: list, camera_names: list, 
+    def __init__(self, dataset_path_list: list, camera_names: list=[], 
                 chunk_size: int = 16, 
                 ctrl_space: str = 'ee', ctrl_type: str = 'delta',
                 image_size: tuple = (480, 640), preload_data: bool = False):

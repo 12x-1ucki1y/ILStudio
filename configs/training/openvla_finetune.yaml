@@ -87,8 +87,6 @@ evaluation_strategy: "steps"
 # Random seed
 seed: 42
 
-# Logging directory
-logging_dir: "./logs"
 
 # Checkpoint resuming
 resume_from_checkpoint: true

@@ -7,7 +7,8 @@ try:
     import lerobot
     from lerobot.datasets.lerobot_dataset import LeRobotDataset, LeRobotDatasetMetadata
 except ImportError:
-    lerobot = None
+    import lerobot
+    from lerobot.common.datasets.lerobot_dataset import LeRobotDataset, LeRobotDatasetMetadata
 import numpy as np
 import warnings
 from benchmark.utils import resize_with_pad

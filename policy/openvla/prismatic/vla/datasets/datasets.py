@@ -75,7 +75,7 @@ class RLDSDataset(IterableDataset):
         data_mix: str,
         batch_transform: RLDSBatchTransform,
         resize_resolution: Tuple[int, int],
-        shuffle_buffer_size: int = 20000,
+        shuffle_buffer_size: int = 256_000,
         train: bool = True,
         image_aug: bool = False,
         chunk_size: int = 16,
@@ -141,22 +141,22 @@ class RLDSDataset(IterableDataset):
             )}),
 
         # Detect distributed training and add sharding parameters
-        try:
-            from accelerate import PartialState
-            partial_state = PartialState()
-            if partial_state.num_processes > 1:
-                # Distributed training detected
-                rlds_config["num_shards"] = partial_state.num_processes
-                rlds_config["shard_index"] = partial_state.process_index
-                print(f"[RLDS] Distributed training detected: {partial_state.num_processes} processes, "
-                      f"current process: {partial_state.process_index}")
-        except ImportError:
-            # Fallback to torch.distributed if accelerate is not available
-            if dist.is_available() and dist.is_initialized():
-                rlds_config["num_shards"] = dist.get_world_size()
-                rlds_config["shard_index"] = dist.get_rank()
-                print(f"[RLDS] Distributed training detected: {dist.get_world_size()} processes, "
-                      f"current process: {dist.get_rank()}")
+        # try:
+        #     from accelerate import PartialState
+        #     partial_state = PartialState()
+        #     if partial_state.num_processes > 1:
+        #         # Distributed training detected
+        #         rlds_config["num_shards"] = partial_state.num_processes
+        #         rlds_config["shard_index"] = partial_state.process_index
+        #         print(f"[RLDS] Distributed training detected: {partial_state.num_processes} processes, "
+        #               f"current process: {partial_state.process_index}")
+        # except ImportError:
+        #     # Fallback to torch.distributed if accelerate is not available
+        #     if dist.is_available() and dist.is_initialized():
+        #         rlds_config["num_shards"] = dist.get_world_size()
+        #         rlds_config["shard_index"] = dist.get_rank()
+        #         print(f"[RLDS] Distributed training detected: {dist.get_world_size()} processes, "
+        #               f"current process: {dist.get_rank()}")
 
         # Initialize RLDS Dataset
         self.rlds_config = rlds_config 
