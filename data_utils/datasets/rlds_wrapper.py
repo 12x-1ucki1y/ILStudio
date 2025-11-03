@@ -9,7 +9,7 @@ def f(x):
     return x
 
 class WrappedRLDSDataset(IterableDataset):
-    def __init__(self, dataset_dir:str, data_mix, image_size=(256, 256), chunk_size=16, ctrl_type='delta', ctrl_space='ee', use_state=True, use_depth=False, num_parallel_calls: int=16, *args, **kwargs):
+    def __init__(self, dataset_dir:str, data_mix, image_size=(256, 256), chunk_size=16, ctrl_type='delta', ctrl_space='ee', use_state=True, use_depth=False, num_parallel_calls: int=16, shuffle_buffer_size: int=256000, *args, **kwargs):
         super().__init__()
         self.chunk_size = chunk_size
         self.ctrl_space = ctrl_space
@@ -25,6 +25,7 @@ class WrappedRLDSDataset(IterableDataset):
             resize_resolution=image_size,
             load_proprio=use_state,
             load_depth=use_depth,
+            shuffle_buffer_size=shuffle_buffer_size,
             *args,
             **kwargs
         )

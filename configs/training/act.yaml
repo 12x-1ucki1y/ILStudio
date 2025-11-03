@@ -15,8 +15,8 @@
 # Note: Model-specific data processing parameters are now in configs/model/default.yaml
 
 # Data loading (training process related)
-preload_data: false
-
+preload_data: true
+background_prefetch: false
 # =============================================================================
 # OPTIMIZER CONFIGURATION
 # =============================================================================
@@ -24,7 +24,7 @@ preload_data: false
 
 # Learning rate and scheduling
 learning_rate: 0.0001
-weight_decay: 0.0001
+weight_decay: 0.0
 warmup_steps: 0
 warmup_ratio: 0.0
 lr_scheduler_type: "constant"
@@ -49,7 +49,7 @@ report_to: "none"
 
 # Saving settings
 save_strategy: "steps"
-save_steps: 10000
+save_steps: 5000
 save_total_limit: 50
 
 # =============================================================================
@@ -60,7 +60,6 @@ save_total_limit: 50
 # DataLoader settings
 dataloader_num_workers: 8
 dataloader_pin_memory: true
-dataloader_prefetch_factor: 4
 remove_unused_columns: false
 
 # Evaluation settings
@@ -77,12 +76,13 @@ seed: 0
 
 # Training duration
 num_train_epochs: 3
-max_steps: 1000000
+max_steps: 50000
 
 # Batch sizes (typically determined by hardware)
 per_device_train_batch_size: 64
 per_device_eval_batch_size: 32
 
+# Logging directory (often derived from output_dir)
 
 # Checkpoint resuming (often handled automatically)
 resume_from_checkpoint: True

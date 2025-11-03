@@ -45,7 +45,7 @@ def parse_param():
     parser.add_argument('--use_spawn', action='store_true',
                        help='Use spawn method for multiprocessing')
     # Model parameters (will be loaded from checkpoint config if not provided)
-    parser.add_argument('--chunk_size', type=int, default=64,
+    parser.add_argument('-ck', '--chunk_size', type=int, default=64,
                        help='Actual chunk size for policy that will truncate each raw chunk')
     # Parse arguments
     args, unknown = parser.parse_known_args()

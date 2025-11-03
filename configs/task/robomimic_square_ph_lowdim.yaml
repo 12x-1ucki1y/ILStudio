@@ -7,6 +7,7 @@ datasets:
       ctrl_space: 'ee'
       ctrl_type: 'delta'
       use_wrist_img: false
+      chunk_size: 1
       use_img: false
       use_low_dim: true
     action_norm_mask: [-1]

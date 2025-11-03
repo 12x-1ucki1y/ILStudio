@@ -18,9 +18,9 @@
                 "ILSTD_CACHE": "/mnt/model/ilstd/data",
                 "HF_ENDPOINT": "https://hf-mirror.com",
             },
-            "args": [
-                "-m", "ckpt/fm_mimic"
-            ],
+            // "args": [
+            //     "-m", "ckpt/fm_mimic"
+            // ],
             // "args": [
             //     "-t", "robomimic_square_ph_lowdim", "-p", "flow_matching", "-o", "ckpt/fm_mimic", "-c", "default"
             // ],
@@ -28,8 +28,11 @@
             //     "-e", "libero_object_0", "-m", "localhost:5000", "--use_spawn", "-o", "results/asdjkhajkshckjj"
             // ],
             // "args": [ //train openpi full-finetune
-            //     "-t", "libero_object_rlds", "-p", "pi0_libero_object_full", "-o", "ckpt/openpi_debug_libero", "-c", "openpi_full"
+            //     "-t", "libero_object_rlds", "-p", "pi0_libero_object", "-o", "ckpt/openpi_debug_libero_1103", "-c", "openpi_full"
             // ],
+            "args": [
+                "-m", "ckpt/aloha_1103/checkpoint-13000/", "-e", "aloha_transfer", "-o results/aloha_1103", "--use_spawn"
+            ],
             // "args": [ // openpi policy server
             //     "-m", "ckpt/pi0_libero_obj_full/checkpoint-10000"
             // ],

@@ -17,6 +17,4 @@ model_args:
   state_dim: 14
   discrete_state_input: False
   pytorch_weight_path: null
-action_normalize: "minmax"
-state_normalize: "minmax"
 trainer_class: Trainer

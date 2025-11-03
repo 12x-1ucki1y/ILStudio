@@ -317,7 +317,8 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
             persistent_workers=True,
             prefetch_factor=getattr(args, 'dataloader_prefetch_factor', 2),
         )
-        loader = BackgroundPrefetcher(loader, getattr(args, 'dataloader_prefetch_factor', 2))
+        if getattr(args, 'background_prefetch', False):
+            loader = BackgroundPrefetcher(loader, getattr(args, 'dataloader_prefetch_factor', 2))
     elif is_iter_data(dataset):
         if hasattr(dataset, 'dataset') and is_rlds_data(dataset.dataset):
             # RLDS dataset
@@ -331,7 +332,6 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
                 batch_size=batch_size,
                 num_workers=0,
                 collate_fn=collator,
-                drop_last=True,
             )
         else:
             # Pytorch Iterable dataset

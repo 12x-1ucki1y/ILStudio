@@ -36,7 +36,7 @@ class SmolVLAPolicyConfig(PretrainedConfig):
             scheduler_decay_steps: int = 30_000,
             scheduler_decay_lr: float = 2.5e-6,
             vlm_model_name: str = "HuggingFaceTB/SmolVLM2-500M-Video-Instruct",
-            load_vlm_weights: bool = False,
+            load_vlm_weights: bool = True,
             add_image_special_tokens: bool = False,
             attention_mode: str = "cross_attn",
             prefix_length: int = -1,

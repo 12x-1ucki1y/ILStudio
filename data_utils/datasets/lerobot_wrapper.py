@@ -17,6 +17,7 @@ class WrappedLerobotDataset(tud.Dataset):
     def __init__(self, 
             dataset_path_list: list, 
             camera_names: list=[], 
+            root: str = None,
             chunk_size: int = 16,  
             ctrl_space: str = 'ee', 
             ctrl_type: str = 'delta',
@@ -26,6 +27,7 @@ class WrappedLerobotDataset(tud.Dataset):
             ):
         super().__init__()
         self.chunk_size = chunk_size
+        self.root = root
         datasets = []
         data_metas = []
         dataset_dirs = []
@@ -33,9 +35,9 @@ class WrappedLerobotDataset(tud.Dataset):
         num_frames = []
         all_camera_keys = dict()
         for data_path in dataset_path_list:
-            ds_meta = LeRobotDatasetMetadata(data_path)
+            ds_meta = LeRobotDatasetMetadata(data_path, root=self.root)
             delta_timestamps = {'action': [t / ds_meta.fps for t in range(chunk_size)]}
-            dataset = LeRobotDataset(data_path, delta_timestamps=delta_timestamps)
+            dataset = LeRobotDataset(data_path, root=self.root, delta_timestamps=delta_timestamps)
             data_metas.append(ds_meta)
             datasets.append(dataset)
             dataset_dirs.append(str(dataset.root))

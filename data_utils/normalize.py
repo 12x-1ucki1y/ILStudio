@@ -871,6 +871,7 @@ def load_normalizers(args):
     """
     try:
         # load normalizers
+        if isinstance(args.model_name_or_path, str) and args.model_name_or_path.endswith('/'): args.model_name_or_path = args.model_name_or_path[:-1]
         policy_normalize_file = os.path.join(os.path.dirname(args.model_name_or_path), 'normalize.json')
         if not os.path.exists(policy_normalize_file):
             policy_normalize_file = os.path.join(args.model_name_or_path, 'normalize.json')

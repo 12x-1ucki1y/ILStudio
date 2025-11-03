@@ -31,7 +31,7 @@ model_args:
   
   # VLM model configuration
   vlm_model_name: "HuggingFaceTB/SmolVLM2-500M-Video-Instruct"
-  load_vlm_weights: false
+  load_vlm_weights: true
   add_image_special_tokens: false
   attention_mode: "cross_attn"
   prefix_length: -1

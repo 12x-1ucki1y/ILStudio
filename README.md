@@ -115,6 +115,7 @@ python start_teleop_recorder.py -c so101_follower
 | ResNet                | [[7]](https://arxiv.org/abs/1512.03385)                                                                |
 | SMolVLA               | [[8]](https://arxiv.org/abs/2506.01844)                                                                |
 | Octo                  | [[9]](https://octo-models.github.io/)    |
+| FlowMatching                  |  -    |
 
 ## 🏆 Simulation Benchmark Gallery
 - aloha_sim
@@ -162,6 +163,11 @@ We align the format of the data at the level of dataloader, thus is compatible t
 if the platform is headless, please use the command below to solve this issue:
 ```shell
 export MUJOCO_GL=egl
+```
+
+- **Cmake Error**: CMake Error at CMakeLists.txt:1 (cmake_minimum_required):  Compatibility with CMake < 3.5 has been removed from CMake. 
+```shell
+export CMAKE_POLICY_VERSION_MINIMUM=X.X # your cmake version, e.g., 3.5 or 4.0
 ```
 
 - when `eval_sim.py` raises errors like `malloc(): unaligned tcache chunk detected`, please add `--use_spawn` at the end fo the evaluation command.  

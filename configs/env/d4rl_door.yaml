@@ -1,7 +1,7 @@
 type: gymnasium_robotics
 # Example fields consumed by benchmark.aloha.AlohaSimEnv
 task: AdroitHandDoor-v1
-max_timesteps: 400
+max_timesteps: 100
 ctrl_space: joint
 ctrl_type: abs
 use_camera: True
