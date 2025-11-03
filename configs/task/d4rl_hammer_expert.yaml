@@ -1,6 +1,6 @@
 # 新的灵活数据集配置格式
 datasets:
-  - name: "d4rl_door_expert"
+  - name: "d4rl_hammer_expert"
     class: "D4RLDataset"
     args:
       dataset_path_list: ['D4RL/door/expert-v2']

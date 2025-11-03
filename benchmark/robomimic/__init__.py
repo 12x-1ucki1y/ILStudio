@@ -40,7 +40,7 @@ class RobomimicEnv(MetaEnv):
             'robot0_eef_quat',
             'robot0_gripper_qpos',
         ]
-        if self.env_name=='TwoArmTransport':
+        if env_name=='TwoArmTransport':
             state_keys += ['robot1_eef_pos', 'robot1_eef_quat', 'robot1_gripper_qpos']
         if self.use_low_dim:
             state_keys = ['object'] + state_keys

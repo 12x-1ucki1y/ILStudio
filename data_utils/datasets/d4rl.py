@@ -28,6 +28,9 @@ class D4RLDataset(EpisodicDataset):
     
     def initialize(self):
         import minari
+        dataset_dir = os.environ.get("MINARI_DATASETS_PATH")
+        dataset_dir = dataset_dir if dataset_dir is not None else os.path.join(os.path.expanduser("~"), ".minari", "datasets")
+        os.makedirs(dataset_dir, exist_ok=True)
         datasets = [minari.load_dataset(di, download=True) for di in self.dataset_path_list]
         self._languages = [self.get_raw_lang(di) for di in self.dataset_path_list]
         all_episodes = []
@@ -41,8 +44,7 @@ class D4RLDataset(EpisodicDataset):
                 episodes.append(episode_dict)
             all_episodes.append(episodes)
         self._datasets = all_episodes
-        dataset_dir = os.environ.get("MINARI_DATASETS_PATH")
-        dataset_dir = dataset_dir if dataset_dir is not None else os.path.join(os.path.expanduser("~"), ".minari", "datasets")
+        
         self._dataset_dir = os.path.join(dataset_dir, self.dataset_path_list[0])
         self.episode_ids = np.arange(sum([len(ei) for ei in self._datasets]))
         self.dataset_path_list = sum([[f"{i}:{j}" for j in range(len(self._datasets[i]))] for i in range(len(self._datasets))], [])
