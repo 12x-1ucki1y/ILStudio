@@ -19,15 +19,15 @@
                 "HF_HOME": "/inspire/hdd/project/robot-action/public/models",
                 "TRANSFORMERS_CACHE": "/inspire/hdd/project/robot-action/public/models",
             },
-            // "args": [
-            //     "-t", "libero_object_rlds", "--task.action_normalize", "percentile", "--task.state_normalize", "percentile", "-p", "smolvla_libero", "-c", "smolvla", "-o", "ckpt/smolvla_1103_night_train"
-            // ],
+            "args": [
+                "-t", "libero_object_rlds", "--task.action_normalize", "percentile", "--task.state_normalize", "percentile", "-p", "smolvla_libero", "-c", "smolvla", "-o", "ckpt/smolvla_1104_morning_debug"
+            ],
             // "args": [
             //     "-e", "robomimic", "-o", "results/robomimic_square_fm_1733", "--use_spawn"
             // ],
-            "args": [
-                "-m", "ckpt/smolvla_1103/checkpoint-10000"
-            ],
+            // "args": [
+            //     "-m", "ckpt/smolvla_1103/checkpoint-10000"
+            // ],
             // "args": [
             //     "-t", "robomimic_square_ph_lowdim", "-p", "flow_matching", "-o", "ckpt/fm_mimic", "-c", "default"
             // ],

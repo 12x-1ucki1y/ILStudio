@@ -323,7 +323,8 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
         if hasattr(dataset, 'dataset') and is_rlds_data(dataset.dataset):
             # RLDS dataset
             # set tf data options here
-            dataset.dataset = dataset.dataset.prefetch(getattr(args, 'dataloader_prefetch_factor', 16))
+            import tensorflow as tf
+            dataset.dataset = dataset.dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
             dataset.dataset = dataset.dataset.with_ram_budget(1)
             wrapped_data = WrappedIterableDataset(dataset, processor)
             batch_size = args.per_device_train_batch_size if is_training else args.per_device_eval_batch_size

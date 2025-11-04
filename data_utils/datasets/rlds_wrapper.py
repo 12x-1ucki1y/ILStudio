@@ -32,16 +32,15 @@ class WrappedRLDSDataset(IterableDataset):
         dataset = self.rlds_dataset.dataset
         def format_convert(frame):
             # Convert int64 to int32 for PyTorch compatibility
-            data_dict = {}
-            data_dict["state"] = frame['observation']['proprio'][0]
-            data_dict["action"] = tf.cast(frame["action"], tf.float32)
-            data_dict["raw_lang"] = frame["task"]["language_instruction"]
-            data_dict["is_pad"] = ~frame['action_pad_mask']
-            data_dict['image'] = frame['observation']['image_primary']
-            data_dict['timestamp'] = frame['observation']['timestep']
-            data_dict['episode_id'] = frame['traj_index']
-            data_dict["dataset_id"] = frame["dataset_name"]
-            return data_dict
+            frame["state"] = frame['observation']['proprio'][0]
+            frame["action"] = tf.cast(frame["action"], tf.float32)
+            frame["raw_lang"] = frame["task"]["language_instruction"]
+            frame["is_pad"] = ~frame['action_pad_mask']
+            frame['image'] = frame['observation']['image_primary']
+            frame['timestamp'] = frame['observation']['timestep']
+            frame['episode_id'] = frame['traj_index']
+            frame["dataset_id"] = frame["dataset_name"]
+            return frame
         dataset = dataset.map(format_convert, num_parallel_calls=num_parallel_calls)
         self.dataset = dataset
     
