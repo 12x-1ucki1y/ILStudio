@@ -418,6 +418,7 @@ class WrappedIterableDataset(IterableDataset):
             yield sample
 
 
+
 class MapToIterableDataset(IterableDataset):
     """Convert a map-style dataset to an iterable dataset with optional shuffling"""
     def __init__(self, dataset,*args, **kwargs):

@@ -331,8 +331,9 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
             loader = DataLoader(
                 wrapped_data,  
                 batch_size=batch_size,
-                num_workers=0,
+                num_workers=args.dataloader_num_workers,
                 collate_fn=collator,
+                persistent_workers=True,
             )
         else:
             # Pytorch Iterable dataset

@@ -1,6 +1,7 @@
 from policy.openvla.prismatic.vla.datasets.datasets import RLDSDataset
 from torch.utils.data import IterableDataset
 from data_utils.utils import convert_rlds_sample
+from typing import Optional
 import torch
 import tensorflow as tf
 
@@ -9,7 +10,7 @@ def f(x):
     return x
 
 class WrappedRLDSDataset(IterableDataset):
-    def __init__(self, dataset_dir:str, data_mix, image_size=(256, 256), chunk_size=16, ctrl_type='delta', ctrl_space='ee', use_state=True, use_depth=False, num_parallel_calls: int=16, shuffle_buffer_size: int=256000, *args, **kwargs):
+    def __init__(self, dataset_dir:str, data_mix, image_size=(256, 256), chunk_size=16, ctrl_type='delta', ctrl_space='ee', use_state=True, use_depth=False, num_parallel_calls: Optional[int]=None, num_parallel_reads: Optional[int]=None,shuffle_buffer_size: int=256000, *args, **kwargs):
         super().__init__()
         self.chunk_size = chunk_size
         self.ctrl_space = ctrl_space
@@ -26,6 +27,8 @@ class WrappedRLDSDataset(IterableDataset):
             load_proprio=use_state,
             load_depth=use_depth,
             shuffle_buffer_size=shuffle_buffer_size,
+            num_parallel_calls=num_parallel_calls,
+            num_parallel_reads=num_parallel_reads,
             *args,
             **kwargs
         )
@@ -41,7 +44,7 @@ class WrappedRLDSDataset(IterableDataset):
             frame['episode_id'] = frame['traj_index']
             frame["dataset_id"] = frame["dataset_name"]
             return frame
-        dataset = dataset.map(format_convert, num_parallel_calls=num_parallel_calls)
+        dataset = dataset.map(format_convert, num_parallel_calls=num_parallel_calls if num_parallel_calls is not None else tf.data.AUTOTUNE)
         self.dataset = dataset
     
     def __iter__(self):

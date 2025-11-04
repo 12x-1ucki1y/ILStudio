@@ -1,4 +1,3 @@
-# 新的灵活数据集配置格式
 datasets:
   - name: "lerobot_metaworld"
     class: "WrappedLerobotDataset"
