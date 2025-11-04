@@ -6,11 +6,12 @@ datasets:
       chunk_size: 64
       ctrl_space: 'ee'
       ctrl_type: 'abs'
+      action_norm_mask: [-1]
 
 # Task-specific parameters
 action_dim: 4
 state_dim: 4
-image_size: [480, 480]
+image_size: [512, 512]
 action_normalize: "zscore"
 state_normalize: "zscore"
 

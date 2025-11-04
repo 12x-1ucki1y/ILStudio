@@ -36,7 +36,7 @@ class WrappedLerobotDataset(tud.Dataset):
         all_camera_keys = dict()
         for data_path in dataset_path_list:
             ds_meta = LeRobotDatasetMetadata(data_path, root=self.root)
-            delta_timestamps = {'action': [t / ds_meta.fps for t in range(chunk_size)]}
+            delta_timestamps = {'action': [t / ds_meta.fps for t in range(1)]}
             dataset = LeRobotDataset(data_path, root=self.root, delta_timestamps=delta_timestamps)
             data_metas.append(ds_meta)
             datasets.append(dataset)
@@ -194,7 +194,7 @@ class WrappedLerobotDataset(tud.Dataset):
         return data_dict
     
         
-# if __name__=='__main__':
-#     dataset = WrappedLerobotDataset(["lerobot/aloha_mobile_cabinet", "lerobot/aloha_mobile_cabinet"])
-#     d = dataset.extract_from_episode(86, ['state', 'action'])
-#     print('ok')
+if __name__=='__main__':
+    dataset = WrappedLerobotDataset(["lerobot/metaworld_mt50", ])
+    d = dataset.extract_from_episode(86, ['state', 'action'])
+    print('ok')

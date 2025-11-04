@@ -1,14 +1,10 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
-name = "ilstd_robomimic"
+name = "robomimic-project"
 version = "0.1.0"
-description = "A Plug-and-Play Imitation-Learning Playground for Robotics"
+description = "libero"
 readme = "README.md"
-requires-python = "==3.10.*"
-license = { text = "MIT" }
+requires-python = ">=3.10,<3.11"
+
 dependencies = [
     "torch>=2.4.0",
     "torchvision>=0.19.0",
@@ -18,7 +14,7 @@ dependencies = [
     "peft>=0.17.1",
     "opencv-python>=4.9.0.80",
     "rospkg==1.5.0",
-    "imageio==2.37.0",
+    "imageio",
     "pillow>=11.3.0",
     "tianshou==0.2.0",
     "pytest",
@@ -31,12 +27,8 @@ dependencies = [
     "dlimp @ git+https://github.com/kvablack/dlimp@5edaa4691567873d495633f2708982b42edf1972",
 ]
 
+[tool.uv]
+default-groups = []
 
 [tool.uv.sources]
-dlimp = { git = "https://github.com/kvablack/dlimp", rev = "ad72ce3a9b414db2185bc0b38461d4101a65477a" }
-
-[tool.hatch.build.targets.wheel]
-packages = ["."]
-
-[tool.hatch.metadata]
-allow-direct-references = true
+libero = { path = "../../third_party/libero", editable = true }

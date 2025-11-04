@@ -96,11 +96,12 @@ def evaluate(args, policy, env, video_writer=None):
                 if len(frames.shape)==5: frames = frames[:, 0]
                 frames = frames.transpose(0, 2, 3, 1)
                 for env_i in range(len(env)):
-                    video_frames[env_i].append(frames[env_i])
+                    if not success[env_i]:
+                        video_frames[env_i].append(frames[env_i])
             act = policy.select_action(obs, t)
             obs, reward, done, info = env.step(act)
             obs = organize_obs(obs, args.ctrl_space)
-            # 判断是否成功
+            # Decide if success
             success = success | done
             if success.all(): 
                 for sidx in range(success.shape[0]):
@@ -112,11 +113,11 @@ def evaluate(args, policy, env, video_writer=None):
                     if horizons[sidx]>t: horizons[sidx] = t
 
     env.close()
-    # 汇总结果
+    # Compute metrics
     total_successes = int(success.sum().item())
     total = len(env)
     success_rate = 1.0*total_successes/len(env)
-    # 保存视频
+    # Save video
     if video_writer is not None:
         for env_i in range(len(env)):
             for frame in video_frames[env_i]:

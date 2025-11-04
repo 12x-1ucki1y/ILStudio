@@ -93,7 +93,7 @@ class MLPPolicy(PreTrainedModel):
         }
         return activations.get(activation_name.lower(), nn.ReLU())
     
-    def _init_weights(self):
+    def _init_weights(self, *args, **kwargs):
         """Initialize network weights."""
         for module in self.modules():
             if isinstance(module, nn.Linear):
