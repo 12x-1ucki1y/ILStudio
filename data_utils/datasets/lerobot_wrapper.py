@@ -11,7 +11,7 @@ except ImportError:
     from lerobot.common.datasets.lerobot_dataset import LeRobotDataset, LeRobotDatasetMetadata
 import numpy as np
 import warnings
-from benchmark.utils import resize_with_pad
+# from benchmark.utils import resize_with_pad
 
 class WrappedLerobotDataset(tud.Dataset):
     def __init__(self, 
@@ -22,6 +22,7 @@ class WrappedLerobotDataset(tud.Dataset):
             ctrl_space: str = 'ee', 
             ctrl_type: str = 'delta',
             image_size: tuple = None,
+            tolerance_s: float = 1e-4,
             *args, 
             **kwargs,
             ):
@@ -36,8 +37,8 @@ class WrappedLerobotDataset(tud.Dataset):
         all_camera_keys = dict()
         for data_path in dataset_path_list:
             ds_meta = LeRobotDatasetMetadata(data_path, root=self.root)
-            delta_timestamps = {'action': [t / ds_meta.fps for t in range(1)]}
-            dataset = LeRobotDataset(data_path, root=self.root, delta_timestamps=delta_timestamps)
+            delta_timestamps = {'action': [t / ds_meta.fps for t in range(chunk_size)]}
+            dataset = LeRobotDataset(data_path, root=self.root, delta_timestamps=delta_timestamps, tolerance_s=tolerance_s)
             data_metas.append(ds_meta)
             datasets.append(dataset)
             dataset_dirs.append(str(dataset.root))
@@ -129,12 +130,17 @@ class WrappedLerobotDataset(tud.Dataset):
         ds_meta = self.dataset_metas[dataset_idx]
         all_features = ds_meta.features
         preserved_keys = []
+        ori_k = {}
         if 'state' in keyname:
             preserved_keys.append('observation.state')
+            ori_k['observation.state'] = 'state'
         if 'action' in keyname:
             preserved_keys.append('action')
+            ori_k['action'] = 'action'
         if 'image' in keyname or 'images' in keyname:
             preserved_keys.extend(ds_meta.camera_keys)
+            for i,k in enumerate(ds_meta.camera_keys):
+                ori_k[k] = f'images_{i}'
             ignore_image = False
         else:
             ignore_image = all([ckey not in keyname for ckey in ds_meta.camera_keys])
@@ -150,7 +156,7 @@ class WrappedLerobotDataset(tud.Dataset):
         if ignore_image:
             for k,v in subdata.meta.features.items():
                 if v['dtype']=='hidden': subdata.meta.info['features'][k]['dtype'] = 'video'
-        res_dict = {k: np.stack([efeat[k] for efeat in  extracted_feats]) if isinstance(extracted_feats[0][k], np.ndarray) else [efeat[k] for efeat in  extracted_feats] for k in preserved_keys}
+        res_dict = {ori_k[k]: np.stack([efeat[k] for efeat in  extracted_feats]) if isinstance(extracted_feats[0][k], np.ndarray) else [efeat[k] for efeat in  extracted_feats] for k in preserved_keys}
         return res_dict
     
     def __getitem__(self, index):
@@ -195,6 +201,6 @@ class WrappedLerobotDataset(tud.Dataset):
     
         
 if __name__=='__main__':
-    dataset = WrappedLerobotDataset(["lerobot/metaworld_mt50", ])
+    dataset = WrappedLerobotDataset(["lerobot/metaworld_mt50", ], root="/inspire/hdd/project/robot-action/public/data/metaworld_mt50", tolerance_s=10.0)
     d = dataset.extract_from_episode(86, ['state', 'action'])
     print('ok')
