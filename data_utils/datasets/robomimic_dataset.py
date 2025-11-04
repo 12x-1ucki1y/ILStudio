@@ -57,7 +57,7 @@ class RobomimicDataset(EpisodicDataset):
         ObsUtils.initialize_obs_utils_with_obs_specs(MODALITIES)
         keyname = 'image' if self.use_img or self.use_wrist_img else 'low_dim'
         self._datasets = [SequenceDataset(**self.create_config(di)) for di in self.dataset_path_list if keyname in di]
-        self._languages = [self.get_raw_lang(di) for di in self.dataset_path_list if 'image' in di]
+        self._languages = [self.get_raw_lang(di) for di in self.dataset_path_list if 'image' in di or 'low_dim' in di]
         self._dataset_dir = os.path.dirname(self.dataset_path_list[0])
         self.episode_ids = np.arange(sum(d.n_demos for d in self._datasets))
         self.dataset_path_list = sum([[f"{idx}:{ep}" for ep in di.demos] for idx, di in enumerate(self._datasets)], [])
@@ -118,7 +118,7 @@ class RobomimicDataset(EpisodicDataset):
                 task_name = t
                 break
         if task_name is None: raise KeyError("Unknown task for obs_key_shapes")
-        self.task_name = None
+        self.task_name = task_name
         if task_name=='transport':
             obs_key_shapes_list = obs_key_shapes_list + [('robot1_eef_pos', [3]), ('robot1_eef_quat', [4]), ('robot1_gripper_qpos', [2])]
             
@@ -291,6 +291,6 @@ class RobomimicDataset(EpisodicDataset):
         return data_dict
 
 if __name__=='__main__':
-    ds = RobomimicDataset(['/inspire/hdd/project/robot-action/public/data/robomimic/square/ph'], use_low_dim=True, use_img=False, image_size=(256, 256))
+    ds = RobomimicDataset(['/inspire/hdd/project/robot-action/public/data/robomimic/transport/ph'], use_low_dim=True, use_img=False, image_size=(256, 256))
     d = ds[0]
     print('ok')
