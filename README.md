@@ -3,6 +3,9 @@
 <h1> ILStudio: A Modular Imitation Learning Playground for Robotics
 </h1>
 
+# 📫 Concat:
+- Wang Z. <zwang@stu.xmu.edu.cn>
+- Yuxin G. <yuxinxmu@163.com>
 
 
 </div>
