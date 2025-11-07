@@ -105,7 +105,7 @@ def main(args):
     model = model_components['model']
     config = model_components.get('config', None)
     if config:
-        print(f"Loaded config from YAML: {type(config).__name__}")
+        print(f"Loaded config from YAML: {type(config).__name__}") 
     ml_utils.print_model_trainable_information(model)
     
     # Load dataset

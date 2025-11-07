@@ -83,7 +83,11 @@ class WrappedLerobotDataset(tud.Dataset):
     def get_episode_len(self):
         episode_lens = []
         for ds_meta in self.dataset_metas:
-            episode_lens.extend([e['length'] for e in ds_meta.episodes.values()])
+            try:
+                ds_meta_length = [e['length'] for e in ds_meta.episodes.values()]
+            except AttributeError as e:
+                ds_meta_length = [ds_meta.episodes[i]['length'] for i in range(ds_meta.total_episodes)]
+            episode_lens.extend(ds_meta_length)
         return episode_lens
     
     def __len__(self):
@@ -201,6 +205,6 @@ class WrappedLerobotDataset(tud.Dataset):
     
         
 if __name__=='__main__':
-    dataset = WrappedLerobotDataset(["lerobot/metaworld_mt50", ], root="/inspire/hdd/project/robot-action/public/data/metaworld_mt50", tolerance_s=10.0)
+    dataset = WrappedLerobotDataset(["lerobot/metaworld_mt50", ], root="/inspire/hdd/project/robot-action/public/data/lerobot/metaworld_mt50", tolerance_s=10.0)
     d = dataset.extract_from_episode(86, ['state', 'action'])
     print('ok')

@@ -9,6 +9,7 @@ import os
 from collections import OrderedDict
 from data_utils.rotate import quat2axisangle
 from data_utils.datasets.base import EpisodicDataset
+from typing import List, Union
 
 MODALITIES = {
     "obs": {
@@ -36,10 +37,11 @@ class RobomimicDataset(EpisodicDataset):
     This class handles loading and processing of RoboMimic datasets,
     which include various manipulation tasks from the RoboMimic benchmark.
     """
-    def __init__(self, *args, use_low_dim: bool = False, use_img: bool = True, use_wrist_img: bool = False, **kwargs):
+    def __init__(self, *args, use_low_dim: bool = False, use_img: bool = True, use_wrist_img: bool = False, filter_by_attribute:str|list[str]='train', **kwargs):
         self.use_low_dim = use_low_dim      
         self.use_img = use_img
         self.use_wrist_img = use_wrist_img
+        self.filter_by_attribute = filter_by_attribute
         self.obs_key_shapes = None
         self.task_name = None
         self.low_dim_key = []
@@ -56,7 +58,15 @@ class RobomimicDataset(EpisodicDataset):
         if self.use_wrist_img: MODALITIES["obs"]["rgb"].append("robot0_eye_in_hand_image")
         ObsUtils.initialize_obs_utils_with_obs_specs(MODALITIES)
         keyname = 'image' if self.use_img or self.use_wrist_img else 'low_dim'
-        self._datasets = [SequenceDataset(**self.create_config(di)) for di in self.dataset_path_list if keyname in di]
+        if self.multi_dataset:
+            all_h5 = sum([self._find_all_hdf5(di) for di in self.dataset_path_list], [])
+            self.dataset_path_list = [di for di in all_h5 if keyname in di]
+            if isinstance(self.filter_by_attribute, str):
+                self.filter_by_attribute = [self.filter_by_attribute for di in self.dataset_path_list if keyname in di]
+        else:
+            if isinstance(self.filter_by_attribute, str):
+                self.filter_by_attribute = [self.filter_by_attribute]
+        self._datasets = [SequenceDataset(**self.create_config(di, fbai)) for di,fbai in zip(self.dataset_path_list, self.filter_by_attribute) if keyname in di]
         self._languages = [self.get_raw_lang(di) for di in self.dataset_path_list if 'image' in di or 'low_dim' in di]
         self._dataset_dir = os.path.dirname(self.dataset_path_list[0])
         self.episode_ids = np.arange(sum(d.n_demos for d in self._datasets))
@@ -291,6 +301,8 @@ class RobomimicDataset(EpisodicDataset):
         return data_dict
 
 if __name__=='__main__':
-    ds = RobomimicDataset(['/inspire/hdd/project/robot-action/public/data/robomimic/transport/ph'], use_low_dim=True, use_img=False, image_size=(256, 256))
-    d = ds[0]
+    d1 = RobomimicDataset(['/inspire/hdd/project/robot-action/public/data/robomimic/transport/ph', ], use_low_dim=True, use_img=False, image_size=(256, 256))
+    d2 = RobomimicDataset(['/inspire/hdd/project/robot-action/public/data/robomimic/transport/mh', ], use_low_dim=True, use_img=False, image_size=(256, 256))
+    d12 = RobomimicDataset(['/inspire/hdd/project/robot-action/public/data/robomimic/transport/ph', '/inspire/hdd/project/robot-action/public/data/robomimic/transport/mh'], use_low_dim=True, use_img=False, image_size=(256, 256))
+    print(f"Len ph: {len(d1)}, Len mh: {len(d2)}, Len mix: {len(d12)}")
     print('ok')

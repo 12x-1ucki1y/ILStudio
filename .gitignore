@@ -3,7 +3,7 @@ ckpt
 results/
 hub/
 assets/robot/
-policy/*gc
+policy/*gc*
 data/
 data
 __pycache__/
@@ -20,3 +20,4 @@ outputs/
 num2words/
 .venv/
 uv.lock
+configs/policy/*gc*

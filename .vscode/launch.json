@@ -14,14 +14,20 @@
             "env": {
                 "MUJOCO_GL": "egl",
                 "CUDA_VISIBLE_DEVICES": "0",
-                "HF_DATASETS_CACHE": "/inspire/hdd/project/robot-action/public/data",
+                // "HF_DATASETS_CACHE": "/inspire/hdd/project/robot-action/public/data",
                 "ILSTD_CACHE": "/mnt/model/ilstd/data",
                 "HF_HOME": "/inspire/hdd/project/robot-action/public/models",
-                "TRANSFORMERS_CACHE": "/inspire/hdd/project/robot-action/public/models",
+                // "TRANSFORMERS_CACHE": "/inspire/hdd/project/robot-action/public/models",
             },
             "args": [
-                "-t", "lerobot_libero", "-p", "pi0_libero_object", "-c", "openpi_lora", "-o", "ckpt/pi1131301"
+                "-p", "smolvla_mw", "-t", "lerobot_metaworld", "-c", "smolvla", "-o", "ckpt/smolvla_mw_1107"
             ],
+            // "args": [
+            //     "--training.tau_start", "5.0", "-p", "fm_can_gc", "-t", "robomimic_can_mh_lowdim", "-o", "ckpt/robomimic_gc_fm_can_mh_lowdim_1105_debug", "-c", "default", "--training.max_steps", "10000000", "--training.save_steps", "200000"
+            // ],
+            // "args": [
+            //     "-t", "lerobot_libero", "-p", "pi0_libero_object", "-c", "openpi_lora", "-o", "ckpt/pi1131301"
+            // ],
             // "args": [
             //     "-p", "fm_square", "-t", "robomimic_square_mh_lowdim", "-c", "default", "-o", "ckpt/debug_robomimic_fm_square_mh_lowdim", "--training.max_steps", "1000000", "--training.save_steps", "50000"
             // ],

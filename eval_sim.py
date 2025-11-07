@@ -22,6 +22,8 @@ def parse_param():
     parser.add_argument('-o', '--output_dir', type=str, default='results/dp_aloha_transer-official-ema-freq50-dnoise10-aug',
                     help='Directory to save results')
     # Model arguments
+    parser.add_argument('-s', '--seed', type=int, default=0,
+                       help='random seed')
     parser.add_argument('--is_pretrained', action='store_true', default=True,
                        help='Whether to use pretrained model')
     parser.add_argument('--device', type=str, default='cuda',
@@ -38,9 +40,9 @@ def parse_param():
     # task/max_timesteps come from env config; override via --env.task / --env.max_timesteps if needed
     parser.add_argument('--fps', type=int, default=50,
                        help='Frames per second')
-    parser.add_argument('--num_rollout', type=int, default=4,
+    parser.add_argument('-n', '--num_rollout', type=int, default=4,
                        help='Number of rollouts')
-    parser.add_argument('--num_envs', type=int, default=2,
+    parser.add_argument('-ne', '--num_envs', type=int, default=2,
                        help='Number of environments')
     parser.add_argument('--use_spawn', action='store_true',
                        help='Use spawn method for multiprocessing')
@@ -54,8 +56,8 @@ def parse_param():
     return args
 
 if __name__=='__main__':
-    set_seed(0)
     args = parse_param()
+    set_seed(args.seed)
     if args.use_spawn: mp.set_start_method('spawn', force=True)
     policy = load_policy(args)
 

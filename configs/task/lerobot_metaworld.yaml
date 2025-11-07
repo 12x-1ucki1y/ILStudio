@@ -3,6 +3,7 @@ datasets:
     class: "WrappedLerobotDataset"
     args:
       dataset_path_list: [lerobot/metaworld_mt50]
+      root: "/inspire/hdd/project/robot-action/public/data/lerobot/metaworld_mt50"
       chunk_size: 64
       ctrl_space: 'ee'
       ctrl_type: 'abs'

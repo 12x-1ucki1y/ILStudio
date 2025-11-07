@@ -17,6 +17,7 @@ CHECKPOINT_PATH=$1
 
 # Validate checkpoint path
 if [ ! -d "$CHECKPOINT_PATH" ]; then
+
     echo "❌ Error: Checkpoint directory does not exist: $CHECKPOINT_PATH"
     exit 1
 fi

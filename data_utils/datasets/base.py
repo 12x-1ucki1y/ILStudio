@@ -54,10 +54,12 @@ class EpisodicDataset(torch.utils.data.Dataset):
             self.dataset_dir = dataset_path_list[0]
             os.makedirs(self.dataset_dir, exist_ok=True)
             self.dataset_path_list = self._find_all_hdf5(self.dataset_dir)
+            self.multi_dataset = False
         else:
             # Backward compatibility: dataset_path_list contains file paths
             self.dataset_path_list = dataset_path_list
             self.dataset_dir = os.path.dirname(dataset_path_list[0]) if len(dataset_path_list) > 0 else ""
+            self.multi_dataset = True
         
         self.episode_ids = np.arange(len(self.dataset_path_list))
         self.chunk_size = chunk_size
@@ -303,6 +305,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
             'reasoning': reasoning,
             'timestamp': start_ts,  
             'episode_id': episode_id,
+            '__index__': index
         }  # Construct sample dict
         assert raw_lang is not None, ""
         return sample

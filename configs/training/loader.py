@@ -72,10 +72,14 @@ class TrainingConfig:
             filtered_config = {k: v for k, v in config_dict.items() if k in valid_params}
             invalid_params = set(config_dict.keys()) - valid_params
             
-            if invalid_params:
-                print(f"Warning: Ignoring invalid TrainingArguments parameters: {invalid_params}")
+            # if invalid_params:
+            #     print(f"Warning: Ignoring invalid TrainingArguments parameters: {invalid_params}")
             
-            return transformers.TrainingArguments(**filtered_config)
+            training_args = transformers.TrainingArguments(**filtered_config)
+            if invalid_params:
+                for k in invalid_params:
+                    setattr(training_args, k, config_dict[k])
+            return training_args
 
 
 def load_training_config(config_path: str = "configs/training/default.yaml") -> TrainingConfig:
