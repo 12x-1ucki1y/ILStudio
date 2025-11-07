@@ -9,13 +9,13 @@
 
 
 
-| ACT - Insertion                                          | Diffusion UNet - Transfer Cube                               | ACT - Square                                             |
-|----------------------------------------------------------|--------------------------------------------------------------|----------------------------------------------------------|
-| <img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/act_aloha_insertion.gif" height="200">  | <img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/diffusion_aloha_transfer.gif" height="200"> | <img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/act_robomimic_square.gif" height="200"> |
+| ACT - Insertion                                          | Diffusion UNet - Transfer Cube                               | ACT - Square                                             |FlowMatching - Transport                                             |
+|----------------------------------------------------------|--------------------------------------------------------------|----------------------------------------------------------|----------------------------------------------------------|
+| <img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/act_aloha_insertion.gif" height="200">  | <img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/diffusion_aloha_transfer.gif" height="200"> | <img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/act_robomimic_square.gif" height="200"> |<img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/flowmatching_transport.gif" height="200"> |
 
-| Koch - Pick & Place -Inference                                     |     SO101 - Fold Tower -Inference               | BC_MLP - AdroitHandDoor                                                         |
-|----------------------------------------------------------|--------------------------------------------------------------|----------------------------------------------------------|
-| <img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/fig_koch.gif" height="200">             | <img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/so101_fold.gif" height="200">          |<img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/fig_door.gif" height="200">|
+| Koch - Pick & Place -Inference                                     |     SO101 - Fold Tower -Inference               | BC_MLP - AdroitHandDoor                                                         |Pi0 - LIBERO                                                         |
+|----------------------------------------------------------|--------------------------------------------------------------|----------------------------------------------------------|----------------------------------------------------------|
+| <img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/fig_koch.gif" height="200">             | <img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/so101_fold.gif" height="200">          |<img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/fig_door.gif" height="200">|<img src="https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/pi0_libero.gif" height="200">|
 
 IL-Studio is an open-source repository that lets researchers and engineers jump-start imitation-learning experiments on popular robot manipulation benchmarks with minimal friction. The entire training, evaluation, and deployment pipeline has been carefully modularized so that you can swap-in your own policy, environment, or dataset without touching the rest of the stack.
 
