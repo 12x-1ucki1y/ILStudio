@@ -3,10 +3,6 @@
 <h1> ILStudio: A Modular Imitation Learning Playground for Robotics
 </h1>
 
-# 📫 Concat:
-- Wang Z. <zwang@stu.xmu.edu.cn>
-- Yuxin G. <yuxinxmu@163.com>
-
 
 </div>
 
@@ -174,6 +170,10 @@ export CMAKE_POLICY_VERSION_MINIMUM=X.X # your cmake version, e.g., 3.5 or 4.0
 ```
 
 - when `eval_sim.py` raises errors like `malloc(): unaligned tcache chunk detected`, please add `--use_spawn` at the end fo the evaluation command.  
+
+## 📫 Concat:
+- Wang Z. <zwang@stu.xmu.edu.cn>
+- Yuxin G. <yuxinxmu@163.com>
 
 ## 🙏 Acknowledge
 This repo is built on the open source codebases below. Thanks to the authors' wonderful contributions.
