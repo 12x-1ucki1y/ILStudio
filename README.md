@@ -32,10 +32,10 @@ This will install the core dependencies for the main `IL-Studio` project.
 
 ```shell
 git clone https://github.com/WwZzz/IL-Studio.git
-# Init submodule (Optional)
-git submodule update --init --recursive 
 # Navigate to the project root
 cd IL-Studio
+# Init submodule (Optional)
+git submodule update --init --recursive 
 # Install uv by 'pip install uv' before running the command below
 uv sync
 ```
