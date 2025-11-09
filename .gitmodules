@@ -4,9 +4,6 @@
 [submodule "policy/octo/octo_pytorch"]
 	path = policy/octo/octo_pytorch
 	url = https://github.com/emb-ai/octo-pytorch.git
-[submodule "benchmark/robotwin/RoboTwin"]
-	path = benchmark/robotwin/RoboTwin
-	url = https://github.com/robotwin-Platform/RoboTwin.git
 [submodule "third_party/libero"]
 	path = third_party/libero
 	url = https://github.com/Lifelong-Robot-Learning/LIBERO.git

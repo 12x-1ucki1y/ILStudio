@@ -8,7 +8,10 @@ from lerobot.robots.so101_follower import SO101FollowerConfig, SO101Follower
 from deploy.robot.base import BaseRobot
 import numpy as np
 import traceback
-from lerobot.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
+try:
+    from lerobot.utils.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
+except ImportError:
+    from lerobot.errors import DeviceAlreadyConnectedError, DeviceNotConnectedError
 from lerobot.cameras.opencv.camera_opencv import OpenCVCamera
 from benchmark.base import MetaAction, MetaObs
 from pathlib import Path

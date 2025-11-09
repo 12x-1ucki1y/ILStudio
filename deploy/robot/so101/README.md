@@ -8,6 +8,12 @@ The So101 implementation provides:
 - **Follower Robot**: `So101FollowerWithCamera` - Controls the So101 follower arm with integrated camera support
 - **Leader Teleoperator**: `So101Leader` - Captures movements from a So101 leader arm for teleoperation
 
+## Installation
+```shell
+cd third_party/lerobot
+pip install -e ".[feetech]"
+```
+
 ## Architecture
 
 The implementation follows the standard robot interface pattern:
