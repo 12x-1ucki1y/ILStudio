@@ -51,7 +51,7 @@ If `uv` is not preferred, just use `pip install -r requirements.txt` to use this
 uv run python train.py --policy act --task sim_transfer_cube_scripted --output_dir ckpt/act_aloha_sim_transfer
 
 # Evaluation at local 
-un run python eval.py --model_name_or_path ckpt/act_aloha_sim_transfer --env_name aloha --task sim_transfer_cube_scripted
+uv run python eval_sim.py --model_name_or_path ckpt/act_aloha_sim_transfer --env aloha_transfer --task sim_transfer_cube_scripted
 ```
 
 ### DP on AlohaSim
