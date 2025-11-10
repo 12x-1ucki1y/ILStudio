@@ -51,7 +51,15 @@ If `uv` is not preferred, just use `pip install -r requirements.txt` to use this
 uv run python train.py --policy act --task sim_transfer_cube_scripted --output_dir ckpt/act_aloha_sim_transfer
 
 # Evaluation at local 
-uv run python eval_sim.py --model_name_or_path ckpt/act_aloha_sim_transfer --env aloha_transfer --task sim_transfer_cube_scripted
+uv runpython eval_sim.py -m  ckpt/act_aloha_sim_transfer -e aloha_transfer -o results/test_
+# 🛠️Note:
+# If you are running this code on a local computer or workstation, you need to perform the following additional steps:
+# Option 1 [without GPU]
+export MUJOCO_GL=osmesa
+uv runpython eval_sim.py -m ckpt/act_aloha_sim_transfer -e aloha_transfer -o results/test_
+# Option 2 [with GPU]
+export MUJOCO_GL=glfw
+python eval_sim.py -m ckpt/act_aloha_sim_transfer -e aloha_transfer -o results/test_ --use_spawn
 ```
 
 ### DP on AlohaSim
@@ -61,7 +69,8 @@ uv run python eval_sim.py --model_name_or_path ckpt/act_aloha_sim_transfer --env
 uv run python train.py --policy diffusion_policy --task sim_transfer_cube_scripted --output_dir ckpt/dp_aloha_sim_transfer --training.max_steps 200000 --training.save_steps 10000
 
 # Evaluation at local 
-un run python eval.py --model_name_or_path ckpt/dp_aloha_sim_transfer --env_name aloha --task sim_transfer_cube_scripted
+
+uv run python eval.py --model_name_or_path ckpt/dp_aloha_sim_transfer --env_name aloha --task sim_transfer_cube_scripted
 ```
 ## Overview
 ![framework](https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/fig_1_ilstudio.png)
