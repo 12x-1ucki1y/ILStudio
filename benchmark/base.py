@@ -42,7 +42,7 @@ class MetaObs:
     def to_batch(self):
         all_keys = ['state', 'state_ee', 'state_joint', 'state_obj', 'image', 'depth', 'pc', 'timestep']
         for k in all_keys:
-            if self[k] is not None:
+            if self[k] is not None and isinstance(self[k], np.ndarray):
                 setattr(self, k, self[k][np.newaxis, :])
     
 META_OBS_KEYS = [f.name for f in fields(MetaObs)]
