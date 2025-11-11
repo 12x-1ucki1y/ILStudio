@@ -4,11 +4,14 @@ import traceback
 import time
 import threading
 import queue
+import os
+import imageio
 import torch
 from data_utils.utils import set_seed,  _convert_to_type
 from deploy.robot.base import AbstractRobotInterface, RateLimiter, make_robot
 from deploy.action_manager import load_action_manager
 from policy.utils import load_policy
+import numpy as np
 
 def parse_param():
     """
@@ -41,7 +44,7 @@ def parse_param():
                        help='Path to model checkpoint OR server address (host:port) for remote policy server')
     parser.add_argument('--norm_path', type=str, default='',
                        help='Path to normalization data')
-    parser.add_argument('--save_dir', type=str, default='results/real_debug',
+    parser.add_argument('-o', '--output_dir', type=str, default='results/real_debug',
                        help='Directory to save results')
     parser.add_argument('--dataset_id', type=str, default='',
                        help='Dataset ID to use (if multiple datasets, defaults to first)')
@@ -57,6 +60,9 @@ def parse_param():
                        help='Image size (width, height)')
     parser.add_argument('--camera_ids', type=str, default='[0]',
                        help='Camera IDs')
+    parser.add_argument('-i', '--episode_id', type=int, default=-1,
+                       help='Episode ID')
+    
     
     # Action manager
     parser.add_argument('--action_manager', type=str, default='OlderFirstManager',
@@ -72,6 +78,16 @@ def parse_param():
 def sensing_producer(robot: AbstractRobotInterface, observation_queue: queue.Queue, args):
     """Sensing producer thread, uses an abstract interface to get observations."""
     print("[Sensing Thread] Producer started.")
+    if args.output_dir!='':
+        os.makedirs(args.output_dir, exist_ok=True)
+        if args.episode_id<0:
+            records = os.listdir(args.output_dir)
+            ids = [int(r.split('video')[-1].split('.mp4')[0]) for r in records if r.endswith('.mp4')]
+            args.episode_id = max(ids)+1 if len(ids)>0 else 0
+        video_path = os.path.join(args.output_dir, f"video{args.episode_id:03d}.mp4")
+        video_writer = imageio.get_writer(video_path, fps=args.sensing_rate, codec='libx264')
+    else:
+        video_writer = None
     try:
         rate_limiter = RateLimiter()
         while robot.is_running():
@@ -81,14 +97,24 @@ def sensing_producer(robot: AbstractRobotInterface, observation_queue: queue.Que
             if obs:
                 print(f"[Sensing Thread] New Observation came at {args.sensing_rate}Hz...")
                 obs = robot.obs2meta(obs)
-                if obs:
-                    if observation_queue.full():
-                        try:
-                            observation_queue.get_nowait()
-                        except queue.Empty:
-                            pass
-                    # Non-blocking: Put data into the queue
-                    observation_queue.put((obs, t_obs))
+                if observation_queue.full():
+                    try:
+                        observation_queue.get_nowait()
+                    except queue.Empty:
+                        pass
+                # Non-blocking: Put data into the queue
+                observation_queue.put((obs, t_obs))
+                if video_writer is not None:
+                # --- Save image to video ---
+                    img = obs['image'][0]
+                    # img: np.ndarray, shape (C, H, W) or (H, W, C)
+                    if img.ndim == 3 and img.shape[0] in [1, 3]:
+                        img = np.transpose(img, (1, 2, 0))
+                    img = np.ascontiguousarray(img)
+                    # Convert float to uint8 if needed
+                    if img.dtype != np.uint8:
+                        img = (img * 255).clip(0, 255).astype(np.uint8)
+                    video_writer.append_data(img)
             rate_limiter.sleep(args.sensing_rate)
     except Exception as e:
         print(f"[Sensing Thread] An exception occurred: {e}")
