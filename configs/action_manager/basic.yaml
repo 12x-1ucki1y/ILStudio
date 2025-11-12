@@ -1,0 +1,8 @@
+# Basic Action Manager Configuration
+# Drop out the previous chunk directly whenever the new one comes
+
+name: basic
+manager_name: BasicActionManager
+
+# Basic manager has no additional parameters
+

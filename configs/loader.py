@@ -73,6 +73,10 @@ class ConfigLoader:
     def load_teleop(self, name_or_path: str) -> Tuple[Dict[str, Any], str]:
         return self.load_yaml_config('teleop', name_or_path)
 
+    def load_manager(self, name_or_path: str) -> Tuple[Dict[str, Any], str]:
+        """Load action manager config with support for command-line overrides via --manager.xxx"""
+        return self.load_yaml_config('action_manager', name_or_path)
+
     def load_env(self, name_or_path: str) -> Tuple[Any, str]:
         """Load env config and return a namespace for attribute-style access.
         Expects a key 'type' in the YAML to indicate which benchmark env to load (e.g., 'aloha', 'libero', 'robomimic').

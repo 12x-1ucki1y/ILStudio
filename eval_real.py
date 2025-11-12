@@ -27,14 +27,12 @@ def parse_param():
     # Robot configuration
     parser.add_argument('-c', '--robot_config', type=str, default='robot/dummy',
                        help='Robot config (name under configs/robot or absolute path to yaml)')
-    parser.add_argument('-pr', '--publish_rate', type=int, default=25,
+    parser.add_argument('-pr', '--publish_rate', type=float, default=25,
                        help='Action publishing rate (Hz)')
-    parser.add_argument('-sr', '--sensing_rate', type=int, default=20,
+    parser.add_argument('-sr', '--sensing_rate', type=float, default=20,
                        help='Sensing rate (Hz)')
     
     # Model arguments
-    parser.add_argument('--is_pretrained', action='store_true', default=True,
-                       help='Whether to use pretrained model')
     parser.add_argument('--device', type=str, default='cuda',
                        help='Device to use for evaluation')
     
@@ -42,36 +40,20 @@ def parse_param():
     parser.add_argument('-m', '--model_name_or_path', type=str, 
                        default='localhost:5000',
                        help='Path to model checkpoint OR server address (host:port) for remote policy server')
-    parser.add_argument('--norm_path', type=str, default='',
-                       help='Path to normalization data')
-    parser.add_argument('-o', '--output_dir', type=str, default='results/real_debug',
-                       help='Directory to save results')
-    parser.add_argument('--dataset_id', type=str, default='',
-                       help='Dataset ID to use (if multiple datasets, defaults to first)')
-    parser.add_argument('--task', type=str, default='sim_transfer_cube_scripted',
-                       help='Task config (name under configs/task or absolute path to yaml)')
-    
-    # Evaluation parameters
-    parser.add_argument('--num_rollout', type=int, default=4,
-                       help='Number of rollouts')
-    parser.add_argument('--max_timesteps', type=int, default=400,
-                       help='Maximum timesteps per episode')
-    parser.add_argument('--image_size', type=str, default='(640, 480)',
-                       help='Image size (width, height)')
-    parser.add_argument('--camera_ids', type=str, default='[0]',
-                       help='Camera IDs')
+    parser.add_argument('-o', '--output_dir', type=str, default='',
+                       help='Directory to save results (videos will be saved here)')
     parser.add_argument('-i', '--episode_id', type=int, default=-1,
-                       help='Episode ID')
-    
+                       help='Episode ID for video naming (auto-increment if -1)')
     
     # Action manager
-    parser.add_argument('--action_manager', type=str, default='OlderFirstManager',
-                       help='Action manager type')
-    parser.add_argument('--manager_coef', type=float, default=1.0,
-                       help='Action manager coefficient')
+    parser.add_argument('-am', '--action_manager', type=str, default='older_first',
+                       help='Action manager config name or path to config file (e.g., basic, older_first, temporal_agg, configs/action_manager/custom.yaml)')
     
-    # Parse arguments
+    # Parse arguments (allow unknown for dotted overrides like --robot.xxx, --manager.xxx)
     args, unknown = parser.parse_known_args()
+    
+    # Store unknown args for ConfigLoader to process
+    setattr(args, 'unknown_args', unknown)
     return args
 
 
@@ -144,11 +126,12 @@ def inference_producer(policy, observation_queue: queue.Queue, action_manager: q
 if __name__ == '__main__':
     set_seed(0)
     args = parse_param()
+    args.is_pretrained = True
+    
     # Build config loader from CLI for overrides
-    import sys
-    unknown = [tok for tok in sys.argv[1:] if tok.startswith('--robot.')]
+    # Explicitly pass unknown_args to ConfigLoader (same as train.py)
     from configs.loader import ConfigLoader
-    cfg_loader = ConfigLoader(args=args, unknown_args=unknown)
+    cfg_loader = ConfigLoader(args=args, unknown_args=getattr(args, 'unknown_args', []))
     
     # For evaluation, parameters will be loaded from saved model config
     # No need to load task config parameters
@@ -182,8 +165,24 @@ if __name__ == '__main__':
     # Create thread-safe queues
     observation_queue = queue.Queue(maxsize=1)
 
-    # init action manager
-    action_manager = load_action_manager(args.action_manager, args)
+    # Load action manager configuration using ConfigLoader
+    # Supports:
+    # - Config names: 'truncated_conservative', 'older_first', etc.
+    # - Config file paths: 'configs/action_manager/my_custom.yaml'
+    # - Command-line overrides: --manager.start_ratio 0.15 --manager.end_ratio 0.25
+    # - Dynamic class loading via module_path and class_name in config
+    print(f"Loading action manager: {args.action_manager}")
+    try:
+        manager_cfg, manager_cfg_path = cfg_loader.load_manager(args.action_manager)
+        print(f"✓ Loaded config from: {manager_cfg_path}")
+        print(f"  Manager: {manager_cfg.get('manager_name', manager_cfg.get('name'))}")
+        print(f"  Parameters: {', '.join(f'{k}={v}' for k, v in manager_cfg.items() if k not in ['name', 'manager_name', 'module_path', 'class_name'])}")
+    except Exception as e:
+        # Fallback for legacy class names
+        print(f"Using legacy loading for: {args.action_manager}")
+        manager_cfg = {'manager_name': args.action_manager}
+    
+    action_manager = load_action_manager(config=manager_cfg)
 
     # Start producer and consumer threads
     sensing_thread = threading.Thread(target=sensing_producer, args=(robot, observation_queue, args))

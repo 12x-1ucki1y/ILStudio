@@ -21,3 +21,4 @@ num2words/
 .venv/
 uv.lock
 configs/policy/*gc*
+configs/action_manager/so101*

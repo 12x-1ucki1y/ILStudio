@@ -11,7 +11,7 @@ Directly sending the policy's chunky, low-frequency actions to the robot would r
 
 ## The Solution: A Smart Buffer
 
-The Action Manager, located in `deploy/action_manager.py`, acts as a thread-safe, smart buffer and interpolator between the inference thread and the main robot control loop.
+The Action Manager, located in `deploy/action_manager/`, acts as a thread-safe, smart buffer and interpolator between the inference thread and the main robot control loop.
 
 ```
 +--------------------------+
@@ -43,25 +43,140 @@ The Action Manager, located in `deploy/action_manager.py`, acts as a thread-safe
 
 ## Available Managers
 
-IL-Studio provides several Action Manager strategies. You can find them in `deploy/action_manager.py`.
+IL-Studio provides several Action Manager strategies. Each manager is implemented in a separate module under `deploy/action_manager/` and has a corresponding configuration file in `configs/action_manager/`.
 
-*   `OlderFirstManager`: A simple baseline manager that maintains a queue of actions and returns the oldest one available. It does not perform interpolation.
+*   **`BasicActionManager`** (`basic`): Directly replaces the previous chunk when a new one arrives. Simple and responsive.
+*   **`OlderFirstManager`** (`older_first`): Refuses new chunks until the current chunk is sufficiently executed (controlled by `coef` parameter).
+*   **`TemporalAggManager`** (`temporal_agg`): Exponentially averages old and new chunks for smoother transitions (controlled by `coef` parameter).
+*   **`TemporalOlderManager`** (`temporal_older`): Combines temporal aggregation with older-first strategy (uses both `coef` and `older_coef`).
+*   **`DelayFreeManager`** (`delay_free`): Compensates for inference/network delays by skipping outdated actions (uses `duration` parameter).
+*   **`TruncatedManager`** (`truncated`): Truncates action chunks by dropping the first and last portions, then executes like OlderFirstManager (uses `start_ratio`, `end_ratio`, and `older_coef` parameters).
+
+For detailed information about each manager and their parameters, see `configs/action_manager/README.md`.
 
 ## Configuration
 
-You select and configure the Action Manager via command-line arguments in `eval_real.py`.
+You select and configure the Action Manager via command-line arguments or configuration files in `eval_real.py`.
+
+### Using Config Names
 
 ```bash
-python eval_real.py \
-    --action_manager OlderFirstManager \
-    --manager_coef 1.0 # An optional coefficient for the manager
+# Use older_first manager with default config values
+python eval_real.py --action_manager older_first
+
+# Use temporal aggregation with default config values
+python eval_real.py --action_manager temporal_agg
+
+# Use delay-free manager with default config values
+python eval_real.py --action_manager delay_free
 ```
+
+### Using Custom Config Files
+
+**To customize parameters, create a custom config file:**
+
+```bash
+# Create your own config file with custom parameters
+cat > configs/action_manager/my_tuned.yaml << EOF
+name: my_tuned
+manager_name: TemporalAggManager
+coef: 0.15
+EOF
+
+# Use the custom config
+python eval_real.py --action_manager my_tuned
+
+# Or use the full path
+python eval_real.py --action_manager configs/action_manager/my_tuned.yaml
+```
+
+**Note:** All parameters must be defined in YAML config files. Command-line parameter overrides (like `--manager_coef`) are not supported to ensure reproducible, version-controlled configurations.
+
+### Legacy Support
+
+For backward compatibility, you can still use class names:
+
+```bash
+python eval_real.py --action_manager OlderFirstManager
+```
+
+This will use the default parameters for that manager class.
 
 ## Customization
 
 You can create your own Action Manager by:
-1.  Creating a new class in `deploy/action_manager.py`.
-2.  Implementing the `put(self, action_chunk, timestamp)` and `get(self, timestamp)` methods.
-3.  Adding your class to the `load_action_manager` factory function in the same file.
+
+### 1. Create a New Manager Class
+
+Create a new file in `deploy/action_manager/` (e.g., `my_custom.py`):
+
+```python
+from .basic import BasicActionManager
+
+class MyCustomManager(BasicActionManager):
+    """My custom action management strategy"""
+    
+    def __init__(self, config):
+        super().__init__(config)
+        self.my_param = getattr(config, 'my_param', 1.0)
+    
+    def put(self, chunk, timestamp: float = None):
+        # Custom logic for storing action chunks
+        pass
+    
+    def get(self, timestamp: float = None):
+        # Custom logic for retrieving actions
+        pass
+```
+
+### 2. Register in `__init__.py`
+
+Add your manager to `deploy/action_manager/__init__.py`:
+
+```python
+from .my_custom import MyCustomManager
+
+__all__ = [
+    # ... existing managers ...
+    'MyCustomManager',
+]
+```
+
+### 3. Update the Loader
+
+Add your manager to the `MANAGER_MAP` in `deploy/action_manager/loader.py`:
+
+```python
+MANAGER_MAP = {
+    # ... existing mappings ...
+    'MyCustomManager': MyCustomManager,
+    'my_custom': MyCustomManager,
+}
+```
+
+### 4. Create a Config File (Optional)
+
+Create `configs/action_manager/my_custom.yaml`:
+
+```yaml
+name: my_custom
+manager_name: MyCustomManager
+
+my_param: 1.5
+```
+
+### 5. Create a Config File and Use Your Custom Manager
+
+```bash
+# Create config file
+cat > configs/action_manager/my_custom.yaml << EOF
+name: my_custom
+manager_name: MyCustomManager
+my_param: 2.0
+EOF
+
+# Use it
+python eval_real.py --action_manager my_custom
+```
 
 This allows you to experiment with different interpolation strategies (e.g., linear, spline) or buffering techniques to achieve the smoothest possible robot motion.

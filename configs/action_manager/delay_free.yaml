@@ -1,0 +1,11 @@
+# Delay-Free Action Manager Configuration
+# Remove the outdated actions from each chunk based on timestamp
+
+name: delay_free
+manager_name: DelayFreeManager
+
+# duration: time duration for each action step (in seconds)
+# Used to calculate how many actions to skip based on delay time
+# Default: 0.05 (50ms per action, equivalent to 20Hz)
+duration: 0.05
+
