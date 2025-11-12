@@ -15,7 +15,7 @@ def load_policy(args):
         policy = PolicyClient(
             host=host,
             port=port,
-            chunk_size=args.chunk_size,
+            chunk_size=getattr(args, 'chunk_size', None),
         )
         
         # Set dummy values for compatibility
@@ -46,7 +46,7 @@ def load_policy(args):
             print(f"Loaded config from checkpoint: {type(config).__name__}")
         policy = MetaPolicy(
             policy=model, 
-            chunk_size=args.chunk_size, 
+            chunk_size=getattr(args, 'chunk_size', None), 
             action_normalizer=normalizers['action'], 
             state_normalizer=normalizers['state'], 
             ctrl_space=ctrl_space, 

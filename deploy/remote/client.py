@@ -24,7 +24,7 @@ class PolicyClient:
     and receives action chunks back. It maintains an action queue just like MetaPolicy.
     """
     
-    def __init__(self, host: str, port: int, chunk_size: int, ctrl_space: str = 'ee', ctrl_type: str = 'delta'):
+    def __init__(self, host: str, port: int, chunk_size: Optional[int] = None, ctrl_space: str = 'ee', ctrl_type: str = 'delta'):
         self.host = host
         self.port = port
         self.chunk_size = chunk_size

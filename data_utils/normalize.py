@@ -684,7 +684,7 @@ class PercentileNormalizer(BaseNormalizer):
         return result.to(dtype) if isinstance(result, torch.Tensor) else result.astype(dtype)
 
 class ZScoreNormalizer(BaseNormalizer):
-    def __init__(self, dataset, dataset_name=None, ctrl_type='delta', ctrl_space='ee', min_std=0.01, mask=None, *args, **kwargs):
+    def __init__(self, dataset, dataset_name=None, ctrl_type='delta', ctrl_space='ee', min_std=1e-6, mask=None, *args, **kwargs):
         super().__init__(dataset, dataset_name, ctrl_type=ctrl_type, ctrl_space=ctrl_space, mask=mask)
         self.min_std = min_std # avoid large deviation
         
