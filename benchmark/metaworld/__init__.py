@@ -20,6 +20,8 @@ class MetaWorldEnv(MetaEnv):
         self.ctrl_type = 'abs'
         self.render_mode = getattr(self.config, 'render_mode', 'rgb_array')
         self.camera_name = getattr(self.config, 'camera_name', None)
+        self.use_camera = getattr(self.config, 'use_camera', True)
+        self.robot_state_only = getattr(self.config, 'robot_state_only', True)
         assert self.camera_name is None or self.camera_name in ALL_CAMERA_NAMES
         self.raw_lang = TASK_DESC[self.config.task][1]
         env = self.create_env()
@@ -28,9 +30,9 @@ class MetaWorldEnv(MetaEnv):
     def create_env(self):
         task = self.config.task
         if self.camera_name is not None:
-            env = gym.make(task, render_mode=self.render_mode, camera_name=self.camera_name)
+            env = gym.make('Meta-World/MT1', env_name=task, render_mode=self.render_mode, camera_name=self.camera_name)
         else:
-            env = gym.make(task, render_mode=self.render_mode)
+            env = gym.make('Meta-World/MT1', env_name=task, render_mode=self.render_mode)
         return env
         
     def meta2act(self, maction: MetaAction):
@@ -42,9 +44,11 @@ class MetaWorldEnv(MetaEnv):
         
     def obs2meta(self, obs):
         state = obs.astype(np.float32)    
+        if self.robot_state_only: state = state[:4]
         if self.use_camera:
             # PandaGym only has one camera view from env.render()
             image = self.env.render()
+            image = image[::-1, ::-1]
             if image is not None:
                 # Convert to (N, C, H, W) format for consistency with other environments
                 if len(image.shape) == 3:  # (H, W, C)
@@ -59,7 +63,7 @@ class MetaWorldEnv(MetaEnv):
         action = args[0]['action']
         observation, reward, terminated, truncated, info = self.env.step(action)
         obs = self.obs2meta(observation)
-        done = info['success']
+        done = info['success']>0.
         info['terminated'] = terminated
         info['truncated'] = truncated
         return obs, reward, done, info
