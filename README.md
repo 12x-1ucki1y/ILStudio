@@ -177,6 +177,12 @@ if the platform is headless, please use the command below to solve this issue:
 export MUJOCO_GL=egl
 ```
 
+- **Romomimic Module Error**: your_path/IL-studio/.venv/bin/python3: can't open file 'your_path/repos/robomimic/train.py': [Errno 2] No such file or directory. 
+```shell
+uv pip install robomimic==0.3.0 
+```
+
+
 - **Cmake Error**: CMake Error at CMakeLists.txt:1 (cmake_minimum_required):  Compatibility with CMake < 3.5 has been removed from CMake. 
 ```shell
 export CMAKE_POLICY_VERSION_MINIMUM=X.X # your cmake version, e.g., 3.5 or 4.0
