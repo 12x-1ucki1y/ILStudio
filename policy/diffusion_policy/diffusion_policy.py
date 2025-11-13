@@ -23,7 +23,7 @@ class DiffusionPolicyConfig(PretrainedConfig):
         camera_names=['primary'],             # List of names for input cameras
         image_sizes=['(256, 256)'],
         observation_horizon=1,      # Number of timesteps in observation
-        prediction_horizon=16,       # Number of timesteps in prediction horizon
+        chunk_size=64,       # Number of timesteps in prediction horizon
         num_inference_timesteps=10,  # Timesteps for inference in noise scheduler
         ema_power=0.75,                # Power for EMA updates
         feature_dimension=64,     # Feature dimensionality for camera embeddings, default is 64
@@ -40,7 +40,7 @@ class DiffusionPolicyConfig(PretrainedConfig):
         super().__init__(**kwargs)
         self.camera_names = camera_names
         self.observation_horizon = observation_horizon
-        self.prediction_horizon = prediction_horizon
+        self.prediction_horizon = chunk_size
         self.num_inference_timesteps = num_inference_timesteps
         self.ema_power = ema_power
         self.action_dim = action_dim

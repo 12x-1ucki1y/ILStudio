@@ -6,12 +6,13 @@ pretrained_config:
 model_args:
   action_dim: 14
   state_dim: 14
-  horizon: 100
+  chunk_size: 100
   n_action_steps: 100
   n_obs_steps: 1
   num_inference_steps: 10
   noise_scheduler: "ddpm"
   noise_scheduler_kwargs: {}
+  camera_names: ['primary']
   obs_encoder: "resnet18"
   obs_encoder_kwargs: {}
   action_encoder: "temporal"

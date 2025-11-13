@@ -14,7 +14,7 @@ def load_model(args):
             observation_horizon=1, 
             action_dim=args.action_dim, 
             state_dim = args.state_dim, 
-            prediction_horizon = args.chunk_size
+            chunk_size = args.chunk_size
         ) 
         model = DiffusionPolicyModel(config=config)
     else:
