@@ -50,7 +50,8 @@ def load_policy(args):
             action_normalizer=normalizers['action'], 
             state_normalizer=normalizers['state'], 
             ctrl_space=ctrl_space, 
-            ctrl_type=ctrl_type
+            ctrl_type=ctrl_type,
+            img_size = getattr(args, 'image_size', None)
         )
     return policy
 

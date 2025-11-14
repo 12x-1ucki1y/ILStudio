@@ -44,7 +44,8 @@ def parse_param():
                        help='Directory to save results (videos will be saved here)')
     parser.add_argument('-i', '--episode_id', type=int, default=-1,
                        help='Episode ID for video naming (auto-increment if -1)')
-    
+    parser.add_argument('--image_size', type=int, default=None,
+                       help='Image size for policy')
     # Action manager
     parser.add_argument('-am', '--action_manager', type=str, default='older_first',
                        help='Action manager config name or path to config file (e.g., basic, older_first, temporal_agg, configs/action_manager/custom.yaml)')

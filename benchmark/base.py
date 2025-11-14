@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 from dataclasses import dataclass, field, fields, asdict
 from collections import deque
 from typing import Optional
@@ -94,8 +95,10 @@ class MetaPolicy:
         self.action_queue = deque(maxlen=chunk_size)
         self.action_normalizer = action_normalizer
         self.state_normalizer = state_normalizer
+        if img_size is not None:
+            img_size = (img_size, img_size) if isinstance(img_size, int) else img_size
         self.img_size = img_size
-    
+
     def meta2obs(self, mobs: MetaObs):
         # convert MetaObs into policy-specific obs
         if hasattr(self.policy, 'meta2obs'):
@@ -120,7 +123,14 @@ class MetaPolicy:
         normed_mobs = self.state_normalizer.normalize_metaobs(mobs, self.ctrl_space)
         # try resize image
         if self.img_size is not None:
-            normed_mobs.image = resize_with_pad(normed_mobs.image, self.img_size[0], self.img_size[1])
+            images = normed_mobs.image 
+            if images.ndim == 5:
+                images = images[:, -1, :, :, :].transpose(0, 2, 3, 1) # n, c, h,w -> n, h, w, c
+                original_dim = 5
+            images = [cv2.resize(img, self.img_size) for img in images]
+            normed_mobs.image = np.stack(images, axis=0).transpose(0, 3, 1, 2) # n, h, w, c -> n, c, h, w
+            if original_dim == 5:
+                normed_mobs.image = normed_mobs.image[:, np.newaxis, :, :, :]
         # convert MetaObs to policy-specific obs
         policy_obs = self.meta2obs(normed_mobs)
         # inference action

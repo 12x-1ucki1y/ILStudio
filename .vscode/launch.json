@@ -20,7 +20,7 @@
                 // "TRANSFORMERS_CACHE": "/inspire/hdd/project/robot-action/public/models",
             },
             "args": [
-                "-c","so101_follower", "-m", "ckpt/dp_so101_fold_1111", "-am", "so101_cover",
+                "-c","so101_follower", "-m", "ckpt/dp_so101_fold_1113", "-am", "so101_cover","--image_size", "256",
             ],
             // "args": [
             //     "-p", "smolvla_mw", "-t", "lerobot_metaworld", "-c", "smolvla", "-o", "ckpt/smolvla_mw_1107"
