@@ -45,9 +45,12 @@ If `uv` is not preferred, just use `pip install -r requirements.txt` to use this
 
 ```shell
 uv run python train.py --policy act --task sim_transfer_cube_scripted --output_dir ckpt/act_aloha_sim_transfer
+# or 
+source .venv/bin/activate # specify the python interpreter
+python train.py --policy act --task sim_transfer_cube_scripted --output_dir ckpt/act_aloha_sim_transfer
 
 # Evaluation at local 
-uv runpython eval_sim.py -m  ckpt/act_aloha_sim_transfer -e aloha_transfer -o results/test_
+uv run python eval_sim.py -m  ckpt/act_aloha_sim_transfer -e aloha_transfer -o results/test_
 # 🛠️Note:
 # If you are running this code on a local computer or workstation, you need to perform the following additional steps:
 # Option 1 [without GPU]
@@ -66,7 +69,7 @@ uv run python train.py --policy diffusion_policy --task sim_transfer_cube_script
 
 # Evaluation at local 
 
-uv run python eval.py --model_name_or_path ckpt/dp_aloha_sim_transfer --env_name aloha --task sim_transfer_cube_scripted
+uv run python eval_sim.py --model_name_or_path ckpt/dp_aloha_sim_transfer --env_name aloha --task sim_transfer_cube_scripted
 ```
 ## Overview
 ![framework](https://raw.githubusercontent.com/WwZzz/myfigs/refs/heads/master/fig_1_ilstudio.png)
@@ -185,6 +188,8 @@ export CMAKE_POLICY_VERSION_MINIMUM=X.X # your cmake version, e.g., 3.5 or 4.0
 ```
 
 - when `eval_sim.py` raises errors like `malloc(): unaligned tcache chunk detected`, please add `--use_spawn` at the end fo the evaluation command.  
+
+- **Failed to build `evdev` on Ubuntu**:  `sudo apt-get update && sudo apt-get install -y python3.10-dev`
 
 ## 📫 Concat:
 - Wang Z. <zwang@stu.xmu.edu.cn>

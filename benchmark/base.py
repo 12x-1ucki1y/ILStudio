@@ -150,7 +150,7 @@ class MetaPolicy:
         else:
             macts.action = macts.action[np.newaxis, :]
         mact_list = [np.array([asdict(MetaAction(action=aii, ctrl_type=macts.ctrl_type, ctrl_space=macts.ctrl_space)) for aii in ai], dtype=object) for ai in macts.action]
-        if self.chunk_size is not None:
+        if self.chunk_size is not None and self.chunk_size>0:
             mact_list = mact_list[:self.chunk_size]
         return mact_list
 
