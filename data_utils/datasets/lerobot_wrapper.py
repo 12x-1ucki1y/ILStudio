@@ -23,12 +23,16 @@ class WrappedLerobotDataset(tud.Dataset):
             ctrl_type: str = 'delta',
             image_size: tuple = None,
             tolerance_s: float = 1e-4,
+            state_key: str = 'observation.state',
+            action_key: str = 'action',
             *args, 
             **kwargs,
             ):
         super().__init__()
         self.chunk_size = chunk_size
         self.root = root
+        self.state_key = state_key
+        self.action_key = action_key
         datasets = []
         data_metas = []
         dataset_dirs = []
@@ -37,7 +41,7 @@ class WrappedLerobotDataset(tud.Dataset):
         all_camera_keys = dict()
         for data_path in dataset_path_list:
             ds_meta = LeRobotDatasetMetadata(data_path, root=self.root)
-            delta_timestamps = {'action': [t / ds_meta.fps for t in range(chunk_size)]}
+            delta_timestamps = {self.action_key: [t / ds_meta.fps for t in range(chunk_size)]}
             dataset = LeRobotDataset(data_path, root=self.root, delta_timestamps=delta_timestamps, tolerance_s=tolerance_s)
             data_metas.append(ds_meta)
             datasets.append(dataset)
@@ -136,11 +140,11 @@ class WrappedLerobotDataset(tud.Dataset):
         preserved_keys = []
         ori_k = {}
         if 'state' in keyname:
-            preserved_keys.append('observation.state')
-            ori_k['observation.state'] = 'state'
+            preserved_keys.append(self.state_key)
+            ori_k[self.state_key] = 'state'
         if 'action' in keyname:
-            preserved_keys.append('action')
-            ori_k['action'] = 'action'
+            preserved_keys.append(self.action_key)
+            ori_k[self.action_key] = 'action'
         if 'image' in keyname or 'images' in keyname:
             preserved_keys.extend(ds_meta.camera_keys)
             for i,k in enumerate(ds_meta.camera_keys):
@@ -181,8 +185,8 @@ class WrappedLerobotDataset(tud.Dataset):
         data_dict = {}
         episode_id = self.per_dataset_episode_start[dataset_idx] + sample['episode_index'].item()
         raw_lang = sample['task']
-        action = sample['action']
-        state = sample['observation.state']
+        action = sample[self.action_key]
+        state = sample[self.state_key]
         timestamp = sample['frame_index'].item()
         is_pad = sample['action_is_pad']
         # process image
@@ -202,9 +206,30 @@ class WrappedLerobotDataset(tud.Dataset):
             'episode_id': episode_id,
         }  
         return data_dict
+
+    def get_dataset_statistics(self):
+        state_stats = self.dataset_metas[0].stats[self.state_key]
+        action_stats = self.dataset_metas[0].stats[self.action_key]
+        state_stats['q01'] = state_stats['min']
+        state_stats['q99'] = state_stats['max']
+        action_stats['q01'] = action_stats['min']
+        action_stats['q99'] = action_stats['max']
+        stats = {
+            'state': state_stats,
+            'action': action_stats,
+            'num_episodes': self.total_episodes,
+            'num_transitions': self.total_frames,
+        }
+        return stats
     
         
 if __name__=='__main__':
-    dataset = WrappedLerobotDataset(["lerobot/metaworld_mt50", ], root="/inspire/hdd/project/robot-action/public/data/lerobot/metaworld_mt50", tolerance_s=10.0)
-    d = dataset.extract_from_episode(86, ['state', 'action'])
+    dataset = WrappedLerobotDataset(["HuggingFaceVLA/metaworld_mt50", ], tolerance_s=10.0)
+    # d = dataset.extract_from_episode(86, ['state', 'action'])
+    d = dataset.get_dataset_statistics()
+    loader = tud.DataLoader(dataset, batch_size=4, shuffle=True, num_workers=32)
+    from tqdm import tqdm
+    for i, batch in tqdm(enumerate(loader), total=len(loader)):
+        # pprint({k: v.shape if isinstance(v, torch.Tensor) else type(v) for k,v in batch.items()})
+        continue
     print('ok')

@@ -19,12 +19,12 @@
                 // "HF_HOME": "/inspire/hdd/project/robot-action/public/models",
                 // "TRANSFORMERS_CACHE": "/inspire/hdd/project/robot-action/public/models",
             },
-            "args": [
-                "-c","so101_follower", "-m", "ckpt/dp_so101_fold_1113", "-am", "so101_cover","--image_size", "256",
-            ],
             // "args": [
-            //     "-p", "smolvla_mw", "-t", "lerobot_metaworld", "-c", "smolvla", "-o", "ckpt/smolvla_mw_1107"
+            //     "-c","so101_follower", "-m", "ckpt/dp_so101_fold_1113", "-am", "so101_cover","--image_size", "256",
             // ],
+            "args": [
+                "-p", "smolvla_mw", "-t", "lerobot_metaworld", "-c", "smolvla", "-o", "ckpt/smolvla_mw_1117"
+            ],
             // "args": [
             //     "--training.tau_start", "5.0", "-p", "fm_can_gc", "-t", "robomimic_can_mh_lowdim", "-o", "ckpt/robomimic_gc_fm_can_mh_lowdim_1105_debug", "-c", "default", "--training.max_steps", "10000000", "--training.save_steps", "200000"
             // ],

@@ -314,8 +314,8 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
             collate_fn=collator,
             drop_last=is_training,
             pin_memory=args.dataloader_pin_memory,
-            persistent_workers=True,
-            prefetch_factor=getattr(args, 'dataloader_prefetch_factor', 2),
+            persistent_workers=getattr(args, 'dataloader_persistent_workers', False) if args.dataloader_num_workers>0 else False,
+            prefetch_factor=getattr(args, 'dataloader_prefetch_factor', 2) if args.dataloader_num_workers>0 else None,
         )
         if getattr(args, 'background_prefetch', False):
             loader = BackgroundPrefetcher(loader, getattr(args, 'dataloader_prefetch_factor', 2))
