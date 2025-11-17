@@ -21,9 +21,9 @@ class LerobotLIBERO(WrappedLerobotDataset):
         all_features = ds_meta.features
         preserved_keys = []
         if 'state' in keyname:
-            preserved_keys.append('state')
+            preserved_keys.append('observation.state')
         if 'action' in keyname:
-            preserved_keys.append('actions')
+            preserved_keys.append('action')
         if 'image' in keyname or 'images' in keyname:
             preserved_keys.extend(ds_meta.camera_keys)
             ignore_image = False
@@ -62,8 +62,8 @@ class LerobotLIBERO(WrappedLerobotDataset):
         data_dict = {}
         episode_id = self.per_dataset_episode_start[dataset_idx] + sample['episode_index'].item()
         raw_lang = sample['task']
-        action = sample['actions']
-        state = sample['state']
+        action = sample['action']
+        state = sample['observation.state']
         timestamp = sample['frame_index'].item()
         is_pad = sample['action_is_pad']
         # process image

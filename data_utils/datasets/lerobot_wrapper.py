@@ -41,8 +41,8 @@ class WrappedLerobotDataset(tud.Dataset):
         all_camera_keys = dict()
         for data_path in dataset_path_list:
             ds_meta = LeRobotDatasetMetadata(data_path, root=self.root)
-            delta_timestamps = {self.action_key: [t / ds_meta.fps for t in range(chunk_size)]}
-            dataset = LeRobotDataset(data_path, root=self.root, delta_timestamps=delta_timestamps, tolerance_s=tolerance_s)
+            delta_timestamps = {'action': [t / ds_meta.fps for t in range(chunk_size)]}
+            dataset = LeRobotDataset(data_path, root=self.root, tolerance_s=tolerance_s)
             data_metas.append(ds_meta)
             datasets.append(dataset)
             dataset_dirs.append(str(dataset.root))
