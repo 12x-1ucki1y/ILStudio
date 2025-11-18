@@ -30,7 +30,10 @@ class PolicyClient:
         self.chunk_size = chunk_size
         self.ctrl_space = ctrl_space
         self.ctrl_type = ctrl_type
-        self.action_queue = deque(maxlen=chunk_size)
+        if chunk_size is not None and chunk_size>0:
+            self.action_queue = deque(maxlen=chunk_size)
+        else:
+            self.action_queue = deque(maxlen=1000)
         self.socket: Optional[socket.socket] = None
         
         # Connect to server
@@ -160,7 +163,7 @@ class PolicyClient:
             Action array or list of actions (compatible with evaluate function)
         """
         # Request new chunk when needed
-        if t % self.chunk_size == 0 or len(self.action_queue) == 0:
+        if (self.chunk_size is not None and self.chunk_size>0 and t % self.chunk_size == 0) or len(self.action_queue)==0:
             # Set timestep in observation (match MetaPolicy format)
             if hasattr(mobs, 'state') and mobs.state is not None:
                 batch_size = mobs.state.shape[0] if len(mobs.state.shape) > 1 else 1
