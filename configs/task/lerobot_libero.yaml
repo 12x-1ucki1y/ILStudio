@@ -5,7 +5,7 @@ datasets:
     args:
       dataset_path_list: [HuggingFaceVLA/libero]
       # root: /inspire/hdd/project/robot-action/public/LIBERO2
-      chunk_size: 64
+      chunk_size: 1
       ctrl_space: 'ee'
       ctrl_type: 'delta'
       camera_names: "observation.images.image"
