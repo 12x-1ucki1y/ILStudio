@@ -92,7 +92,7 @@ class MetaPolicy:
         self.chunk_size = chunk_size
         self.ctrl_space = ctrl_space
         self.ctrl_type = ctrl_type
-        self.action_queue = deque(maxlen=chunk_size)
+        self.action_queue = deque(maxlen=chunk_size) if (chunk_size is not None and chunk_size>0) else deque(maxlen=1000)
         self.action_normalizer = action_normalizer
         self.state_normalizer = state_normalizer
         if img_size is not None:

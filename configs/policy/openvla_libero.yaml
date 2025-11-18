@@ -42,9 +42,9 @@ model_args:
   camera_names: ["primary"]
   history_len: 1
   prediction_len: 1
-  chunk_size: 1
-  action_dim: 14
-  state_dim: 14
+  chunk_size: 100
+  action_dim: 7
+  state_dim: 8
   max_length: 256
   training_mode: "lora"
 action_normalize: percentile
