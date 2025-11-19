@@ -7,9 +7,187 @@ import warnings
 import importlib
 import torch
 import torch.distributed as dist
+import pandas as pd
+from PIL import Image
 from torch.utils.data import DataLoader, ConcatDataset
 from .dataset_wrappers import WrappedDataset, WrappedIterableDataset, MapToIterableDataset
 from .normalize import NORMTYPE2CLASS, load_normalizers, save_norm_meta_to_json, load_normalizer_from_meta
+
+
+def save_example_data(train_data, output_dir):
+    """
+    Save example data from the first dataset for debugging purposes.
+    
+    Args:
+        train_data: The dataset object or list of datasets (can be map-style or iterable)
+        output_dir: Directory to save the example data
+    """
+    try:
+        # Create directory for examples
+        examples_dir = os.path.join(output_dir, 'example_data')
+        
+        # Check if example data already exists
+        if os.path.exists(examples_dir):
+            # Check if any example files exist
+            existing_files = os.listdir(examples_dir)
+            if len(existing_files) > 0:
+                print(f"Example data already exists in {examples_dir}, skipping save.")
+                return
+        
+        os.makedirs(examples_dir, exist_ok=True)
+        
+        # Handle list of datasets or single dataset
+        if isinstance(train_data, list):
+            if len(train_data) == 0:
+                print("Warning: Empty dataset list provided")
+                return
+            dataset = train_data[0]  # Use first dataset
+            print(f"Saving example from first dataset (list of {len(train_data)} datasets)")
+        else:
+            dataset = train_data
+            print("Saving example from single dataset")
+        
+        # Get one sample from the dataset
+        # Check if dataset is map-style (has __getitem__) or iterable
+        sample = None
+        if hasattr(dataset, '__getitem__'):
+            # Map-style dataset
+            try:
+                sample = dataset[0]
+            except Exception as e:
+                print(f"Warning: Could not get sample from map-style dataset: {e}")
+                return
+        else:
+            # Iterable dataset
+            try:
+                sample = next(iter(dataset))
+            except Exception as e:
+                print(f"Warning: Could not get sample from iterable dataset: {e}")
+                return
+        
+        if sample is None:
+            print("Warning: Could not retrieve sample from dataset")
+            return
+        
+        # Save raw language instruction
+        if 'raw_lang' in sample and sample['raw_lang']:
+            lang_file = os.path.join(examples_dir, 'raw_lang.txt')
+            with open(lang_file, 'w', encoding='utf-8') as f:
+                f.write(str(sample['raw_lang']))
+            print(f"Saved language instruction to: {lang_file}")
+        
+        # Save images - save each camera view separately
+        if 'image' in sample and sample['image'] is not None:
+            image_data = sample['image']
+            
+            # Convert tensor to numpy if needed
+            if isinstance(image_data, torch.Tensor):
+                image_data = image_data.cpu().numpy()
+            
+            # Handle different image formats
+            # Expected format: (num_cameras, C, H, W) or (C, H, W)
+            if len(image_data.shape) == 4:  # Multiple cameras: (num_cameras, C, H, W)
+                num_cameras = image_data.shape[0]
+                
+                for cam_idx in range(num_cameras):
+                    img = image_data[cam_idx]  # (C, H, W)
+                    # Convert from (C, H, W) to (H, W, C)
+                    img = np.transpose(img, (1, 2, 0))
+                    # Normalize to 0-255 if needed
+                    if img.max() <= 1.0:
+                        img = (img * 255).astype(np.uint8)
+                    else:
+                        img = img.astype(np.uint8)
+                    
+                    # Save individual camera image
+                    image_file = os.path.join(examples_dir, f'camera_{cam_idx}.png')
+                    pil_image = Image.fromarray(img)
+                    pil_image.save(image_file)
+                    print(f"Saved camera {cam_idx} image (shape: {img.shape}) to: {image_file}")
+                
+            elif len(image_data.shape) == 3:  # Single camera: (C, H, W)
+                img = image_data
+                # Convert from (C, H, W) to (H, W, C)
+                img = np.transpose(img, (1, 2, 0))
+                # Normalize to 0-255 if needed
+                if img.max() <= 1.0:
+                    img = (img * 255).astype(np.uint8)
+                else:
+                    img = img.astype(np.uint8)
+                
+                # Save single camera image
+                image_file = os.path.join(examples_dir, 'camera_0.png')
+                pil_image = Image.fromarray(img)
+                pil_image.save(image_file)
+                print(f"Saved single camera image (shape: {img.shape}) to: {image_file}")
+            else:
+                print(f"Warning: Unexpected image shape: {image_data.shape}")
+        
+        # Save state and action as CSV
+        state_action_data = {}
+        
+        if 'state' in sample and sample['state'] is not None:
+            state = sample['state']
+            if isinstance(state, torch.Tensor):
+                state = state.cpu().numpy()
+            # Flatten if needed
+            state = state.flatten()
+            state_action_data['state'] = state
+        
+        if 'action' in sample and sample['action'] is not None:
+            action = sample['action']
+            if isinstance(action, torch.Tensor):
+                action = action.cpu().numpy()
+            # Action might be (chunk_size, action_dim), save each timestep
+            if len(action.shape) == 2:
+                # Save as multiple rows
+                csv_file = os.path.join(examples_dir, 'state_action.csv')
+                df_data = {'timestep': list(range(action.shape[0]))}
+                
+                # Add action columns
+                for i in range(action.shape[1]):
+                    df_data[f'action_{i}'] = action[:, i]
+                
+                # Add state columns (broadcast state to all timesteps)
+                if 'state' in state_action_data:
+                    state = state_action_data['state']
+                    for i in range(len(state)):
+                        df_data[f'state_{i}'] = [state[i]] * action.shape[0]
+                
+                df = pd.DataFrame(df_data)
+                df.to_csv(csv_file, index=False)
+                print(f"Saved state and action (action shape: {action.shape}) to: {csv_file}")
+            else:
+                # Single action vector
+                action = action.flatten()
+                state_action_data['action'] = action
+                
+                # Create DataFrame
+                csv_file = os.path.join(examples_dir, 'state_action.csv')
+                df = pd.DataFrame([state_action_data])
+                df.to_csv(csv_file, index=False)
+                print(f"Saved state and action to: {csv_file}")
+        
+        # Save reasoning as JSON if not empty
+        if 'reasoning' in sample and sample['reasoning']:
+            reasoning = sample['reasoning']
+            # Check if reasoning is not empty
+            if reasoning and (not isinstance(reasoning, str) or reasoning.strip()):
+                reasoning_file = os.path.join(examples_dir, 'reasoning.json')
+                with open(reasoning_file, 'w', encoding='utf-8') as f:
+                    if isinstance(reasoning, dict):
+                        json.dump(reasoning, f, indent=2, ensure_ascii=False)
+                    else:
+                        json.dump({'reasoning': str(reasoning)}, f, indent=2, ensure_ascii=False)
+                print(f"Saved reasoning to: {reasoning_file}")
+        
+        print("Successfully saved example data from first dataset")
+        
+    except Exception as e:
+        print(f"Error saving example data: {e}")
+        import traceback
+        traceback.print_exc()
+
 
 def safe_decode(value):
     if isinstance(value, bytes):
