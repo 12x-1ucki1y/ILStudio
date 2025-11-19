@@ -127,7 +127,7 @@ class MetaPolicy:
             if images.ndim == 5:
                 images = images[:, -1, :, :, :].transpose(0, 2, 3, 1) # n, c, h,w -> n, h, w, c
                 original_dim = 5
-            images = [cv2.resize(img, self.img_size) for img in images]
+            images = [cv2.resize(img, (self.img_size[1], self.img_size[0])) for img in images] # cv2.resize receive (W,H) and we denote the img size as (H,W)
             normed_mobs.image = np.stack(images, axis=0).transpose(0, 3, 1, 2) # n, h, w, c -> n, c, h, w
             if original_dim == 5:
                 normed_mobs.image = normed_mobs.image[:, np.newaxis, :, :, :]
