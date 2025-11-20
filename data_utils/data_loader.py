@@ -313,7 +313,7 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
         loader = DataLoader(
             wrapped_data,
             batch_size=args.per_device_train_batch_size,
-            # shuffle=(sampler is None and is_training),
+            shuffle=is_training,
             # sampler=sampler,
             num_workers=args.dataloader_num_workers,
             collate_fn=collator,

@@ -3,7 +3,7 @@ datasets:
     class: "WrappedLerobotDataset"
     args:
       dataset_path_list: [HuggingFaceVLA/metaworld_mt50]
-      chunk_size: 64
+      chunk_size: 50
       ctrl_space: 'ee'
       ctrl_type: 'abs'
       tolerance_s: 10.0
@@ -12,7 +12,7 @@ datasets:
 # Task-specific parameters
 action_dim: 4
 state_dim: 4
-image_size: [512, 512]
+image_size: [480, 480]
 action_normalize: "zscore"
 state_normalize: "zscore"
 
