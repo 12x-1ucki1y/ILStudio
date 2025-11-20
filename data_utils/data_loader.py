@@ -305,17 +305,22 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
     if is_map_data(dataset):
         wrapped_data = WrappedDataset(dataset, processor)
         sampler = DistributedSampler(wrapped_data) if is_training and is_distributed() else None
+        persistent_workers = getattr(args, 'dataloader_persistent_workers', False) if args.dataloader_num_workers>0 else False
+        prefetch_factor = getattr(args, 'dataloader_prefetch_factor', 2) if args.dataloader_num_workers>0 else None
+        print("Persistent workers: ", persistent_workers)
+        print("Prefetch_factor:", prefetch_factor)
+        print("Pin Memory:", args.dataloader_pin_memory)
         loader = DataLoader(
             wrapped_data,
             batch_size=args.per_device_train_batch_size,
-            shuffle=(sampler is None and is_training),
-            sampler=sampler,
+            # shuffle=(sampler is None and is_training),
+            # sampler=sampler,
             num_workers=args.dataloader_num_workers,
             collate_fn=collator,
             drop_last=is_training,
             pin_memory=args.dataloader_pin_memory,
-            persistent_workers=getattr(args, 'dataloader_persistent_workers', False) if args.dataloader_num_workers>0 else False,
-            prefetch_factor=getattr(args, 'dataloader_prefetch_factor', 2) if args.dataloader_num_workers>0 else None,
+            persistent_workers=persistent_workers,
+            prefetch_factor=prefetch_factor,
         )
         if getattr(args, 'background_prefetch', False):
             loader = BackgroundPrefetcher(loader, getattr(args, 'dataloader_prefetch_factor', 2))

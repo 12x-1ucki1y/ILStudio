@@ -17,6 +17,7 @@ eval_real_old.py
 outputs/
 .idea/
 .cursor/
+gxy/*
 num2words/
 .venv/
 uv.lock

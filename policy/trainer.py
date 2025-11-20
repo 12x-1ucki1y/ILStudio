@@ -10,7 +10,7 @@ class BaseTrainer(Trainer):
     def get_train_dataloader(self):
         if self._train_loader is None:
             raise ValueError("You passed train_loader=None")
-        return self._train_loader
+        return self.accelerator.prepare(self._train_loader)
 
     def get_eval_dataloader(self, eval_dataset=None):
         if self._eval_loader is None and eval_dataset is not None:

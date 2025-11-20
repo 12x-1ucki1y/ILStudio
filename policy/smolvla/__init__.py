@@ -20,8 +20,8 @@ def load_model(args):
         else:
             vlm = None
         model = SmolVLAPolicy.from_pretrained(args.model_name_or_path, config=config)
-        if vlm is not None:
-            model.model.vlm_with_expert.vlm.load_state_dict(vlm.state_dict())
+        # if vlm is not None:
+        #     model.model.vlm_with_expert.vlm.load_state_dict(vlm.state_dict())
         tokenizer = AutoTokenizer.from_pretrained(model.config.vlm_model_name)
         data_processor = SmolVLAProcess()
         data_collator = SmolVLADataCollator(tokenizer=tokenizer, max_state_dim=model.config.max_state_dim, max_action_dim=model.config.max_action_dim, resize_imgs_with_padding=model.config.resize_imgs_with_padding, max_length=model.config.tokenizer_max_length, padding=model.config.pad_language_to)
