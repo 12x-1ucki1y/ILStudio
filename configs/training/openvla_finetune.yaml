@@ -10,7 +10,7 @@ num_train_epochs: 10
 max_steps: 5000
 
 # Batch sizes (optimized for OpenVLA 7B with LoRA)
-per_device_train_batch_size: 8
+per_device_train_batch_size: 2
 per_device_eval_batch_size: 16
 gradient_accumulation_steps: 2
 
