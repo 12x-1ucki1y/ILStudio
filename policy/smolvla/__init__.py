@@ -3,6 +3,7 @@ import json
 from .data_utils import SmolVLAProcess, SmolVLADataCollator
 from .modeling import SmolVLAPolicy, SmolVLAPolicyConfig
 from transformers import AutoTokenizer, AutoConfig, AutoModelForImageTextToText
+from .trainer import Trainer 
 
 def load_model(args):
     if args.is_pretrained:

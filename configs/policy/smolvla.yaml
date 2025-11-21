@@ -4,7 +4,7 @@ config_class: SmolVLAPolicyConfig
 model_class: SmolVLAPolicy
 data_processor: get_data_processor
 data_collator: get_data_collator
-trainer_class: null  # Use framework default trainer
+trainer_class: Trainer
 pretrained_config:
   model_name_or_path: null
   is_pretrained: false
