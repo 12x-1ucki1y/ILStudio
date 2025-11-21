@@ -1,12 +1,12 @@
 name: openvla
 module_path: policy.openvla
 pretrained_config:
-  model_name_or_path: "openvla/openvla-7b-prismatic"
+  model_name_or_path: "openvla/openvla-7b"
   is_pretrained: false
 trainer_class: Trainer
 model_args:
   # Model architecture parameters
-  pretrained_weight_path: "openvla/openvla-7b-prismatic"
+  pretrained_weight_path: "openvla/openvla-7b"
   # LoRA Configuration
   lora_enable: true
   lora_module: "all"
