@@ -122,6 +122,14 @@ class ConfigLoader:
 
     @staticmethod
     def merge_all_parameters(task_config: Dict[str, Any], policy_config: Dict[str, Any], training_config: Any, args: Optional[Any] = None) -> Dict[str, Any]:
+        """Merge task, policy, and training configurations with proper priority handling.
+        
+        Priority Rules:
+        1. chunk_size: policy > task (policy overrides task datasets)
+        2. action_normalize, state_normalize: policy > task
+        3. action_norm_mask, state_norm_mask: task > policy (preserve task settings)
+        4. action_dim, state_dim: task > policy (task overrides policy model_args)
+        """
         task_params = {
             'action_dim': task_config.get('action_dim', 7),
             'state_dim': task_config.get('state_dim', 7),
@@ -134,6 +142,49 @@ class ConfigLoader:
         # Extract model_args and pretrained_config
         model_args = policy_config.get('model_args', {})
         pretrained_config = policy_config.get('pretrained_config', {})
+        
+        # ========== Priority Rule #1: chunk_size (policy > task) ==========
+        # If policy has chunk_size and it differs from task datasets, override task datasets
+        policy_chunk_size = model_args.get('chunk_size') or policy_config.get('chunk_size')
+        if policy_chunk_size is not None and 'datasets' in task_config:
+            for dataset in task_config['datasets']:
+                if 'args' in dataset and 'chunk_size' in dataset['args']:
+                    task_chunk_size = dataset['args']['chunk_size']
+                    if task_chunk_size != policy_chunk_size:
+                        print(f"⚠️  Config Override: chunk_size = {policy_chunk_size} (policy) overrides {task_chunk_size} (task.datasets['{dataset.get('name', 'unnamed')}'])")
+                        dataset['args']['chunk_size'] = policy_chunk_size
+        
+        # ========== Priority Rule #2: action_normalize, state_normalize (policy > task) ==========
+        policy_action_norm = policy_config.get('action_normalize')
+        policy_state_norm = policy_config.get('state_normalize')
+        task_action_norm = task_config.get('action_normalize')
+        task_state_norm = task_config.get('state_normalize')
+        
+        if policy_action_norm is not None and task_action_norm is not None and policy_action_norm != task_action_norm:
+            print(f"⚠️  Config Override: action_normalize = '{policy_action_norm}' (policy) overrides '{task_action_norm}' (task)")
+        
+        if policy_state_norm is not None and task_state_norm is not None and policy_state_norm != task_state_norm:
+            print(f"⚠️  Config Override: state_normalize = '{policy_state_norm}' (policy) overrides '{task_state_norm}' (task)")
+        
+        # ========== Priority Rule #3: action_norm_mask, state_norm_mask (task > policy) ==========
+        # These should be preserved from task config (no override)
+        task_action_norm_mask = task_config.get('action_norm_mask')
+        task_state_norm_mask = task_config.get('state_norm_mask')
+        
+        # ========== Priority Rule #4: action_dim, state_dim (task > policy) ==========
+        # Task dimensions override policy model_args
+        task_action_dim = task_config.get('action_dim')
+        task_state_dim = task_config.get('state_dim')
+        policy_action_dim = model_args.get('action_dim')
+        policy_state_dim = model_args.get('state_dim')
+        
+        if task_action_dim is not None and policy_action_dim is not None and task_action_dim != policy_action_dim:
+            print(f"⚠️  Config Override: action_dim = {task_action_dim} (task) overrides {policy_action_dim} (policy.model_args)")
+            model_args['action_dim'] = task_action_dim
+        
+        if task_state_dim is not None and policy_state_dim is not None and task_state_dim != policy_state_dim:
+            print(f"⚠️  Config Override: state_dim = {task_state_dim} (task) overrides {policy_state_dim} (policy.model_args)")
+            model_args['state_dim'] = task_state_dim
 
         # Dynamically extract all model parameters from policy config
         # This includes both model_args and any flattened parameters from command line overrides
@@ -167,11 +218,16 @@ class ConfigLoader:
         training_params.update(training_config.config_dict)
 
         cfg_params = policy_config.get('config_params', {}) if isinstance(policy_config, dict) else {}
-        # Check top-level first (command line overrides), then model_args, then config_params, then task_config
+        
+        # ========== Apply Priority Rules to Preferred Values ==========
+        
+        # chunk_size: policy > task (already handled task datasets override above)
         preferred_chunk_size = (policy_config.get('chunk_size') or 
                               model_args.get('chunk_size') or 
                               cfg_params.get('chunk_size') or 
                               task_config.get('chunk_size', 16))
+        
+        # action_normalize, state_normalize: policy > task
         preferred_action_norm = (policy_config.get('action_normalize') or 
                                model_args.get('action_normalize') or 
                                cfg_params.get('action_normalize') or 
@@ -180,11 +236,17 @@ class ConfigLoader:
                               model_args.get('state_normalize') or 
                               cfg_params.get('state_normalize') or 
                               task_config.get('state_normalize', 'minmax'))
+        
+        # action_norm_mask, state_norm_mask: task > policy (preserve task values)
+        preferred_action_norm_mask = task_config.get('action_norm_mask')  # Task priority
+        preferred_state_norm_mask = task_config.get('state_norm_mask')    # Task priority
+        
+        # camera_names: policy > task
         preferred_camera_names = policy_config.get('camera_names', None) 
         if preferred_camera_names is None:
             preferred_camera_names = model_args.get('camera_names', None) 
             if preferred_camera_names is None:
-                preferred_camera_names =task_config.get('camera_names', [])
+                preferred_camera_names = task_config.get('camera_names', [])
 
         all_params = {**task_params, **model_params, **training_params}
         all_params.update({
@@ -193,6 +255,12 @@ class ConfigLoader:
             'state_normalize': preferred_state_norm,
             'camera_names': preferred_camera_names,  # Allow policy to override camera_names
         })
+        
+        # Add norm_mask parameters (task priority - only if they exist in task config)
+        if preferred_action_norm_mask is not None:
+            all_params['action_norm_mask'] = preferred_action_norm_mask
+        if preferred_state_norm_mask is not None:
+            all_params['state_norm_mask'] = preferred_state_norm_mask
         
         # Remove None values to avoid overriding existing values with None
         all_params = {k: v for k, v in all_params.items() if v is not None}

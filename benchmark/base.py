@@ -156,7 +156,14 @@ class MetaPolicy:
 
     def select_action(self, mobs: MetaObs, t:int, return_all=False):
         # normalizing Obs and Actions
-        if (self.chunk_size is not None and t % self.chunk_size == 0) or len(self.action_queue)==0:
+        # Determine if we need to infer new actions
+        should_infer = len(self.action_queue) == 0  # Always infer when queue is empty
+        
+        # If chunk_size is valid (>0), also check if it's time to infer based on timestep
+        if self.chunk_size is not None and self.chunk_size > 0:
+            should_infer = should_infer or (t % self.chunk_size == 0)
+        
+        if should_infer:
             mobs.timestep = np.array([[t] for _ in range(mobs.state.shape[0])])
             mact_list = self.inference(mobs)
             while len(self.action_queue) > 0:

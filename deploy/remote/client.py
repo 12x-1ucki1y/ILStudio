@@ -162,8 +162,15 @@ class PolicyClient:
         Returns:
             Action array or list of actions (compatible with evaluate function)
         """
+        # Determine if we need to request new actions
+        should_infer = len(self.action_queue) == 0  # Always request when queue is empty
+        
+        # If chunk_size is valid (>0), also check if it's time to request based on timestep
+        if self.chunk_size is not None and self.chunk_size > 0:
+            should_infer = should_infer or (t % self.chunk_size == 0)
+        
         # Request new chunk when needed
-        if (self.chunk_size is not None and self.chunk_size>0 and t % self.chunk_size == 0) or len(self.action_queue)==0:
+        if should_infer:
             # Set timestep in observation (match MetaPolicy format)
             if hasattr(mobs, 'state') and mobs.state is not None:
                 batch_size = mobs.state.shape[0] if len(mobs.state.shape) > 1 else 1
