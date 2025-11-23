@@ -18,6 +18,7 @@ outputs/
 .idea/
 .cursor/
 gyx/*
+wyb/*
 num2words/
 .venv/
 uv.lock
