@@ -7,7 +7,10 @@ import warnings
 import importlib
 import torch
 import torch.distributed as dist
-import pandas as pd
+try:
+    import pandas as pd
+except:
+    pd = None
 from PIL import Image
 from torch.utils.data import DataLoader, ConcatDataset
 from .dataset_wrappers import WrappedDataset, WrappedIterableDataset, MapToIterableDataset
