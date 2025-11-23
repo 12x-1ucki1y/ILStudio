@@ -84,14 +84,17 @@ class OpenPiPolicy(PreTrainedModel):
             )
             logging.info(f"Loaded PyTorch weights from {config.pytorch_weight_path}")
     
-    def forward(self, observation, actions=None):
+    def forward(self, observation, actions=None, is_pad=None):
         observation = _model.Observation.from_dict(observation)
         dev = 'cuda'
         observation = jax.tree.map(lambda x: x.to(dev), observation)
         if actions is not None:
             actions = actions.to(dev)
             losses = self.model(observation, actions)
-            return {'loss': losses.mean()}
+            if is_pad is not None:
+                losses = (losses * ~is_pad.unsqueeze(-1))
+            losses = losses[:,:,:self.config.action_dim]
+            return {'loss': losses.mean().unsqueeze(0)}
         else:
             action = self.model.sample_actions(dev, observation)
             return action
