@@ -62,5 +62,7 @@ trainer_class: Trainer
 
 # Training Example
 ```shell
+python train.py -p pi0_aloha -t sim_transfer_cube_scripted -o ckpt/pi0_aloha_1122 -c openpi_full
+
 python train.py -p pi0_libero_object -t libero_object_rlds -o ckpt/pi0_libero_obj -c default
 ```

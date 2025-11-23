@@ -14,15 +14,18 @@
             "env": {
                 "MUJOCO_GL": "egl",
                 "CUDA_VISIBLE_DEVICES": "0",
-                "HF_ENDPOINT": "https://hf-mirror.com"
+                "HF_ENDPOINT": "https://hf-mirror.com",
                 // "HF_DATASETS_CACHE": "/inspire/hdd/project/robot-action/public/data",
                 // "ILSTD_CACHE": "/mnt/model/ilstd/data",
-                // "HF_HOME": "/inspire/hdd/project/robot-action/public/models",
+                "HF_HOME": "/inspire/hdd/global_user/wangzheng-240308120196/huggingface/",
                 // "TRANSFORMERS_CACHE": "/inspire/hdd/project/robot-action/public/models",
             },
-            "args": [//robomimic+act
-                "-t", "sim_insertion_scripted", "-p", "act", "-o", "ckpt/act_1121_debug2", "-c", "act", "--training.preload_data", "False"
+            "args": [
+                "-p", "pi0_mw", "-t", "lerobot_metaworld", "-o", "ckpt/pi0_mw", "-c", "openpi_full"
             ],
+            // "args": [//robomimic+act
+            //     "-p", "pi0_aloha", "-t", "sim_transfer_cube_scripted", "-o", "ckpt/pi0_aloha_1122", "-c", "openpi_full"
+            // ],
             // "args": [
             //     "-p", "smolvla_mw", "-t", "mw_stick_push", "-c", "smolvla", "-o", "ckpt/smolvla_wm1120_bs64_stick_push_debug"
             // ],
