@@ -16,10 +16,13 @@ class SmolVLAProcess:
         #     padding_side=self.padding_side,
         #     return_tensors="pt",
         # )
-        if isinstance(sample['image'], np.ndarray):
-            image_data = sample['image'].astype(np.float32) / 255.0 # k,c,h,w
+        if sample['image'].max()>1.0:
+            if isinstance(sample['image'], np.ndarray):
+                image_data = sample['image'].astype(np.float32) / 255.0 # k,c,h,w
+            else:
+                image_data = sample['image'] / 255.0 # k,c,h,w
         else:
-            image_data = sample['image'] / 255.0 # k,c,h,w
+            image_data = sample['image']
         # organize data
         data_dict = {}
         data_dict['state'] = sample.get('state', None)
