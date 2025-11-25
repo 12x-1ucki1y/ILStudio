@@ -1,6 +1,8 @@
+import configs  # Must be first to suppress TensorFlow logs
 import os
 from tianshou.env import SubprocVectorEnv
 import json
+from loguru import logger
 from data_utils.utils import set_seed
 from tqdm import tqdm
 import imageio
@@ -82,9 +84,9 @@ if __name__=='__main__':
     
     # Iterate through each environment configuration
     for env_idx, env_cfg in enumerate(env_cfgs):
-        print(f"\n{'='*60}")
-        print(f"Evaluating environment {env_idx + 1}/{len(env_cfgs)}")
-        print(f"{'='*60}")
+        logger.info("="*60)
+        logger.info(f"Evaluating environment {env_idx + 1}/{len(env_cfgs)}")
+        logger.info("="*60)
         
         # sync derived values from env config
         if hasattr(env_cfg, 'task'):
@@ -130,7 +132,7 @@ if __name__=='__main__':
             # Remote mode doesn't need model.eval()
             
             eval_result = evaluate(args, policy, env, video_writer=video_writer)
-            print(eval_result)
+            logger.info(eval_result)
             all_eval_results.append(eval_result)
             policy.reset()
         
@@ -156,18 +158,18 @@ if __name__=='__main__':
             with open(env_res_file, 'w') as f:
                 json.dump(eval_result, f)
         
-        print(f"\nEnvironment {env_idx + 1} Results:")
-        print(f"  Success Rate: {eval_result['success_rate']:.2%}")
-        print(f"  Total Success: {eval_result['total_success']}/{eval_result['total']}")
-        print(f"  Avg Horizon (Success): {eval_result['horizon_success']:.2f}")
+        logger.info(f"Environment {env_idx + 1} Results:")
+        logger.info(f"  Success Rate: {eval_result['success_rate']:.2%}")
+        logger.info(f"  Total Success: {eval_result['total_success']}/{eval_result['total']}")
+        logger.info(f"  Avg Horizon (Success): {eval_result['horizon_success']:.2f}")
     
     # Print summary for all environments
     if len(env_cfgs) > 1:
-        print(f"\n{'='*60}")
-        print("Summary of All Environments:")
-        print(f"{'='*60}")
+        logger.info("="*60)
+        logger.info("Summary of All Environments:")
+        logger.info("="*60)
         for env_key, result in all_env_results.items():
-            print(f"{env_key}: Success Rate = {result['success_rate']:.2%} ({result['total_success']}/{result['total']})")
+            logger.info(f"{env_key}: Success Rate = {result['success_rate']:.2%} ({result['total_success']}/{result['total']})")
         
         # Save combined results
         if args.output_dir!='':

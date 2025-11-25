@@ -22,6 +22,7 @@ from collections import OrderedDict
 import copy
 from concurrent.futures import ThreadPoolExecutor
 import warnings
+from loguru import logger
 
 class EpisodicDataset(torch.utils.data.Dataset):
     """
@@ -129,7 +130,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
         Returns:
             Dictionary containing all loaded data
         """
-        print("Pre-Loading all data into memory...")
+        logger.info("Pre-Loading all data into memory...")
         memory_data = {}
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             # Submit parallel tasks
@@ -137,7 +138,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
             # Collect results
             for result in results:
                 memory_data.update(result)
-        print("Pre-Loading Done")
+        logger.info("Pre-Loading Done")
         return memory_data
 
     def get_episode_len(self):
@@ -177,7 +178,7 @@ class EpisodicDataset(torch.utils.data.Dataset):
                                     break
                         elen = root['/episode_len'][0].astype(np.int32) if '/episode_len' in root else root[key][()].shape[0]
                 except Exception as e:
-                    print(f'Error loading {dataset_path} in get_episode_len')
+                    logger.error(f'Error loading {dataset_path} in get_episode_len')
                     quit()
                 all_episode_len.append(elen) 
         return all_episode_len

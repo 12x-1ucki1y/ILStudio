@@ -1,15 +1,15 @@
-
+from loguru import logger
 from deploy.remote import PolicyClient, parse_server_address, is_server_address
 
 def load_policy(args):
     # Check if model_name_or_path is a server address or local checkpoint
     if is_server_address(args.model_name_or_path):
-        print("="*60)
-        print("🤖 Remote Policy Evaluation")
-        print("="*60)
+        logger.info("="*60)
+        logger.info("🤖 Remote Policy Evaluation")
+        logger.info("="*60)
         # Remote server mode
         host, port = parse_server_address(args.model_name_or_path)
-        print(f"🌐 Using remote policy server: {host}:{port}")
+        logger.info(f"🌐 Using remote policy server: {host}:{port}")
         
         # Create remote policy client (no need for normalizers or local model)
         policy = PolicyClient(
@@ -64,7 +64,7 @@ def load_policy(args):
     return policy
 
 def print_model_trainable_information(model, rank0_print=None):
-    if rank0_print is None: rank0_print = print
+    if rank0_print is None: rank0_print = logger.info
     lora_para = sum(p.numel() for n, p in model.named_parameters() if (p.requires_grad and 'lora' in n))
     all_para = sum(p.numel() for n, p in model.named_parameters())
     train_para = sum(p.numel() for n, p in model.named_parameters() if p.requires_grad)

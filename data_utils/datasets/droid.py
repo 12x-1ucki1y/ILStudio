@@ -5,6 +5,7 @@ Thus, we provide a data loader example here that uses the RLDS data format.
 The data loader also applies a few DROID-specific data filters / transformations.
 """
 
+import os
 import concurrent.futures
 import pathlib
 import shutil
@@ -18,6 +19,11 @@ from typing import Union, List
 import dlimp as dl
 import tensorflow as tf
 import tensorflow_datasets as tfds
+
+# Suppress TensorFlow logging after import
+tf.get_logger().setLevel('ERROR')
+tf.autograph.set_verbosity(0)
+
 import collections
 import numpy as np
 import json
@@ -25,6 +31,7 @@ from pathlib import Path
 import logging
 import warnings
 from data_utils.utils import ensure_uint8_image
+from loguru import logger
 
 class DroidDataset:
     def __init__(
@@ -326,7 +333,7 @@ class DroidDataset:
             lock_path = local_path.with_suffix(".lock")
             with filelock.FileLock(lock_path):
                 # Download the data to a local cache.
-                print(f"Downloading {url} to {local_path}")
+                logger.info(f"Downloading {url} to {local_path}")
                 scratch_path = local_path.with_suffix(".partial")
                 def _download_fsspec(url: str, local_path: pathlib.Path, **kwargs):
                     """Download a file from a remote filesystem to the local cache, and return the local path."""
@@ -361,4 +368,3 @@ if __name__=='__main__':
 
     ds_full = DroidDataset(dataset_dir="/inspire/hdd/project/robot-action/public/data/droid", name='droid', version="1.0.1",filter_dict_path="gs://openpi-assets/droid/droid_sample_ranges_v1_0_1.json")
     data2 = next(iter(ds))
-    print('ok')

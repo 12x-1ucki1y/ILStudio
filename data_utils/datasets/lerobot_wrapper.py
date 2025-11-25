@@ -235,6 +235,4 @@ if __name__=='__main__':
     loader = tud.DataLoader(dataset, batch_size=4, shuffle=True, num_workers=32)
     from tqdm import tqdm
     for i, batch in tqdm(enumerate(loader), total=len(loader)):
-        # pprint({k: v.shape if isinstance(v, torch.Tensor) else type(v) for k,v in batch.items()})
         continue
-    print('ok')

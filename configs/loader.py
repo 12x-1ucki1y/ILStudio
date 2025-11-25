@@ -1,5 +1,6 @@
 import os
 import yaml
+from loguru import logger
 from pathlib import Path
 from typing import Tuple, Dict, Any, Optional
 
@@ -321,7 +322,7 @@ class ConfigLoader:
                 if 'args' in dataset and 'chunk_size' in dataset['args']:
                     task_chunk_size = dataset['args']['chunk_size']
                     if task_chunk_size != policy_chunk_size:
-                        print(f"⚠️  Config Override: chunk_size = {policy_chunk_size} (policy) overrides {task_chunk_size} (task.datasets['{dataset.get('name', 'unnamed')}'])")
+                        logger.warning(f"Config Override: chunk_size = {policy_chunk_size} (policy) overrides {task_chunk_size} (task.datasets['{dataset.get('name', 'unnamed')}'])")
                         dataset['args']['chunk_size'] = policy_chunk_size
         
         # ========== Priority Rule #2: action_normalize, state_normalize (policy > task) ==========
@@ -331,10 +332,10 @@ class ConfigLoader:
         task_state_norm = task_config.get('state_normalize')
         
         if policy_action_norm is not None and task_action_norm is not None and policy_action_norm != task_action_norm:
-            print(f"⚠️  Config Override: action_normalize = '{policy_action_norm}' (policy) overrides '{task_action_norm}' (task)")
+            logger.warning(f"Config Override: action_normalize = '{policy_action_norm}' (policy) overrides '{task_action_norm}' (task)")
         
         if policy_state_norm is not None and task_state_norm is not None and policy_state_norm != task_state_norm:
-            print(f"⚠️  Config Override: state_normalize = '{policy_state_norm}' (policy) overrides '{task_state_norm}' (task)")
+            logger.warning(f"Config Override: state_normalize = '{policy_state_norm}' (policy) overrides '{task_state_norm}' (task)")
         
         # ========== Priority Rule #3: action_norm_mask, state_norm_mask (task > policy) ==========
         # These should be preserved from task config (no override)
@@ -349,11 +350,11 @@ class ConfigLoader:
         policy_state_dim = model_args.get('state_dim')
         
         if task_action_dim is not None and policy_action_dim is not None and task_action_dim != policy_action_dim:
-            print(f"⚠️  Config Override: action_dim = {task_action_dim} (task) overrides {policy_action_dim} (policy.model_args)")
+            logger.warning(f"Config Override: action_dim = {task_action_dim} (task) overrides {policy_action_dim} (policy.model_args)")
             model_args['action_dim'] = task_action_dim
         
         if task_state_dim is not None and policy_state_dim is not None and task_state_dim != policy_state_dim:
-            print(f"⚠️  Config Override: state_dim = {task_state_dim} (task) overrides {policy_state_dim} (policy.model_args)")
+            logger.warning(f"Config Override: state_dim = {task_state_dim} (task) overrides {policy_state_dim} (policy.model_args)")
             model_args['state_dim'] = task_state_dim
             
         # Also update top-level policy_config if these keys exist there (due to flattening)
