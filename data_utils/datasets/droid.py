@@ -24,6 +24,7 @@ import json
 from pathlib import Path
 import logging
 import warnings
+from data_utils.utils import ensure_uint8_image
 
 class DroidDataset:
     def __init__(
@@ -296,17 +297,7 @@ class DroidDataset:
             
             # Convert image to torch tensor and ensure uint8 format
             image_np = data['image']
-            # Safety check: ensure images are uint8 with values in [0, 255]
-            if image_np.dtype != np.uint8:
-                warnings.warn(f"DROID image dtype is {image_np.dtype}, converting to uint8. This should not happen.")
-                if image_np.dtype in [np.float32, np.float64, np.float16]:
-                    if image_np.max() <= 1.0:
-                        image_np = (image_np * 255).clip(0, 255).astype(np.uint8)
-                    else:
-                        image_np = image_np.clip(0, 255).astype(np.uint8)
-                else:
-                    image_np = image_np.clip(0, 255).astype(np.uint8)
-            
+            image_np = ensure_uint8_image(image_np)
             data['image'] = torch.einsum('k h w c -> k c h w', torch.from_numpy(image_np))
             data['state'] = torch.from_numpy(data['state']).float()
             data['action'] = torch.from_numpy(data['action']).float()

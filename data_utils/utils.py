@@ -200,10 +200,56 @@ def safe_decode(value):
     else:
         return str(value)
 
+def ensure_uint8_image(image_array):
+    """
+    Ensure image array is uint8 with values in [0, 255] range.
+    Handles conversion from normalized float images (0-1) or other formats.
+    
+    Args:
+        image_array: numpy array or torch tensor
+        
+    Returns:
+        Image array in uint8 format with values [0, 255]
+    """
+    # Handle torch tensors directly without numpy conversion
+    if isinstance(image_array, torch.Tensor):
+        if image_array.dtype == torch.uint8:
+            return image_array
+        
+        if image_array.dtype in [torch.float32, torch.float64, torch.float16]:
+            # Normalized float image (0-1)
+            if image_array.max() <= 1.0 and image_array.min() >= 0.0:
+                return (image_array * 255).clamp(0, 255).to(torch.uint8)
+            # Float image already in [0, 255] range
+            else:
+                return image_array.clamp(0, 255).to(torch.uint8)
+        else:
+            # Other dtypes (int32, int64, etc.)
+            return image_array.clamp(0, 255).to(torch.uint8)
+    
+    # Handle numpy arrays
+    else:
+        if image_array.dtype == np.uint8:
+            return image_array
+        
+        if image_array.dtype in [np.float32, np.float64, np.float16]:
+            # Normalized float image (0-1)
+            if image_array.max() <= 1.0 and image_array.min() >= 0.0:
+                return (image_array * 255).clip(0, 255).astype(np.uint8)
+            # Float image already in [0, 255] range
+            else:
+                return image_array.clip(0, 255).astype(np.uint8)
+        else:
+            # Other dtypes (int32, int64, etc.)
+            return image_array.clip(0, 255).astype(np.uint8)
+
 def convert_rlds_sample(data):
+    # Ensure images are uint8 [0, 255]
+    image_data = ensure_uint8_image(data['image'])
+    
     data_dict = dict(
         raw_lang = safe_decode(data['raw_lang']),
-        image = torch.einsum('k h w c -> k c h w', torch.from_numpy(data['image'])),
+        image = torch.einsum('k h w c -> k c h w', torch.from_numpy(image_data) if isinstance(image_data, np.ndarray) else image_data),
         state = torch.from_numpy(data['state']).float(),
         action = torch.from_numpy(data['action']).float(),
     )

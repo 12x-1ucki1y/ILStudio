@@ -13,6 +13,7 @@ import fnmatch
 import cv2
 import json
 from time import time
+from data_utils.utils import ensure_uint8_image
 from torch.utils.data import TensorDataset, DataLoader, ConcatDataset
 import torchvision.transforms as transforms
 from torchvision.transforms.functional import to_pil_image, to_tensor
@@ -289,6 +290,9 @@ class EpisodicDataset(torch.utils.data.Dataset):
         
         # Construct observations, convert arrays to tensors
         if all_cam_images is not None:
+            # Safety check: ensure images are uint8 with values in [0, 255]
+            all_cam_images = ensure_uint8_image(all_cam_images)
+            
             image_data = torch.from_numpy(all_cam_images)
             image_data = torch.einsum('k h w c -> k c h w', image_data)  # Swap image channels
         else:
