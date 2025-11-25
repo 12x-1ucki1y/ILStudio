@@ -127,7 +127,7 @@ def inference_producer(policy, observation_queue: queue.Queue, action_manager: q
 if __name__ == '__main__':
     set_seed(0)
     args = parse_param()
-    args.is_pretrained = True
+    args.is_training = False
     
     # Build config loader from CLI for overrides
     # Explicitly pass unknown_args to ConfigLoader (same as train.py)

@@ -22,6 +22,3 @@ args:
   history_len: 1
   prediction_len: 100
   num_queries: 100
-pretrained_config:
-  model_name_or_path: facebook/opt-125m
-  is_pretrained: false

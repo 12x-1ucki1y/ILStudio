@@ -40,7 +40,7 @@ def parse_param():
                        help='Dataset ID to use (if multiple datasets, defaults to first)')
     
     # Model parameters (will be loaded from checkpoint config if not provided)
-    parser.add_argument('--chunk_size', type=int, default=64,
+    parser.add_argument('--chunk_size', type=int, default=-1,
                        help='Actual chunk size for policy that will truncate each raw chunk')
     
     # Parse arguments
@@ -61,6 +61,7 @@ if __name__=='__main__':
     
     set_seed(0)
     args = parse_param()
+    args.is_training = False
     
     print("="*60)
     print("🚀 Policy Server Startup")

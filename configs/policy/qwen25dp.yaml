@@ -17,8 +17,6 @@ args:
   gradient_checkpointing: true
   freeze_backbone: false
   lora_lr: 1e-4
-pretrained_config:
-  is_pretrained: false
 config_class: QwenVLPolicyConfig
 model_class: QwenVLForPolicy
 data_processor: get_data_processor

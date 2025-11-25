@@ -355,6 +355,13 @@ class ConfigLoader:
         if task_state_dim is not None and policy_state_dim is not None and task_state_dim != policy_state_dim:
             print(f"⚠️  Config Override: state_dim = {task_state_dim} (task) overrides {policy_state_dim} (policy.model_args)")
             model_args['state_dim'] = task_state_dim
+            
+        # Also update top-level policy_config if these keys exist there (due to flattening)
+        # This prevents the flattened old values from overriding the updated model_args later
+        if 'action_dim' in policy_config and 'action_dim' in model_args:
+            policy_config['action_dim'] = model_args['action_dim']
+        if 'state_dim' in policy_config and 'state_dim' in model_args:
+            policy_config['state_dim'] = model_args['state_dim']
 
         # Dynamically extract all model parameters from policy config
         # This includes both model_args and any flattened parameters from command line overrides
@@ -444,6 +451,10 @@ class ConfigLoader:
             elif isinstance(args.image_size, int):
                 args.image_size = [args.image_size, args.image_size]
             args.image_sizes = ConfigLoader.calculate_image_sizes(args.camera_names, args.image_size)
+            
+            # IMPORTANT: Update args.model_args for policies that use it directly (like ACT)
+            # This ensures the updated action_dim/state_dim are used during model initialization
+            args.model_args = model_params.copy()
         return all_params
 
 

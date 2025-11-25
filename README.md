@@ -34,6 +34,8 @@ cd IL-Studio
 git submodule update --init --recursive 
 # Install uv by 'pip install uv' before running the command below
 uv sync
+# activate the uv python environment
+source .venv/bin/activate
 ```
 
 ### pip
@@ -44,18 +46,19 @@ If `uv` is not preferred, just use `pip install -r requirements.txt` to use this
 ### ACT on AlohaSim
 
 ```shell
-uv run python train.py --policy act --task sim_transfer_cube_scripted --output_dir ckpt/act_aloha_sim_transfer
-# or 
-source .venv/bin/activate # specify the python interpreter
 python train.py --policy act --task sim_transfer_cube_scripted --output_dir ckpt/act_aloha_sim_transfer
 
 # Evaluation at local 
-uv run python eval_sim.py -m  ckpt/act_aloha_sim_transfer -e aloha_transfer -o results/test_
+
+
 # 🛠️Note:
 # If you are running this code on a local computer or workstation, you need to perform the following additional steps:
+# Option 0 [Headless server with GPU]
+export MUJOCO_GL=egl
+python eval_sim.py -m  ckpt/act_aloha_sim_transfer -e aloha_transfer -o results/test_ --use_spawn
 # Option 1 [without GPU]
 export MUJOCO_GL=osmesa
-uv runpython eval_sim.py -m ckpt/act_aloha_sim_transfer -e aloha_transfer -o results/test_
+python eval_sim.py -m ckpt/act_aloha_sim_transfer -e aloha_transfer -o results/test_
 # Option 2 [with GPU]
 export MUJOCO_GL=glfw
 python eval_sim.py -m ckpt/act_aloha_sim_transfer -e aloha_transfer -o results/test_ --use_spawn

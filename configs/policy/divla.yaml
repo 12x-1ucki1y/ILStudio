@@ -9,9 +9,6 @@ args:
   fusion_method: cross_attention
   use_reasoning: false
   reasoning_tokens: 10
-pretrained_config:
-  model_name_or_path: Qwen/Qwen2-VL-2B-Instruct
-  is_pretrained: false
 config_class: DiVLAConfig
 model_class: DiVLAPolicy
 data_processor: get_data_processor

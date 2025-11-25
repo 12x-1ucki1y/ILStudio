@@ -24,8 +24,6 @@ def parse_param():
     # Model arguments
     parser.add_argument('-s', '--seed', type=int, default=0,
                        help='random seed')
-    parser.add_argument('--is_pretrained', action='store_true', default=True,
-                       help='Whether to use pretrained model')
     parser.add_argument('--device', type=str, default='cuda',
                        help='Device to use for evaluation')
     # Model loading - can be checkpoint path or server address
@@ -57,6 +55,7 @@ def parse_param():
 
 if __name__=='__main__':
     args = parse_param()
+    args.is_training = False
     set_seed(args.seed)
     if args.use_spawn: mp.set_start_method('spawn', force=True)
     policy = load_policy(args)
@@ -175,4 +174,3 @@ if __name__=='__main__':
             summary_file = os.path.join(args.output_dir, 'all_envs_summary.json')
             with open(summary_file, 'w') as f:
                 json.dump(all_env_results, f, indent=2)
-

@@ -17,9 +17,6 @@ args:
   gradient_checkpointing: true
   freeze_backbone: false
   lora_lr: 1e-4
-pretrained_config:
-  model_name_or_path: Qwen/Qwen2-VL-2B-Instruct
-  is_pretrained: false
   vlm_model_name_or_path: Qwen/Qwen2-VL-2B-Instruct
 config_class: QwenVLPolicyConfig
 model_class: QwenVLForPolicy

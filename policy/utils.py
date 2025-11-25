@@ -38,9 +38,17 @@ def load_policy(args):
         
         # Load policy directly from checkpoint
         print(f"Loading model from checkpoint: {args.model_name_or_path}")
-        from policy.direct_loader import load_model_from_checkpoint
-        model_components = load_model_from_checkpoint(args.model_name_or_path, args)
-        model = model_components['model']
+        # Fallback to direct checkpoint loading
+        if not hasattr(args, 'policy_module'):
+            from policy.direct_loader import load_model_from_checkpoint
+            if not hasattr(args, 'is_training'):
+                args.is_training = False
+            model_components = load_model_from_checkpoint(args.model_name_or_path, args)
+            model = model_components['model']
+        else:
+            from policy.direct_loader import load_model_from_checkpoint
+            model_components = load_model_from_checkpoint(args.model_name_or_path, args)
+            model = model_components['model']
         config = model_components.get('config', None)
         if config:
             print(f"Loaded config from checkpoint: {type(config).__name__}")

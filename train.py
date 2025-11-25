@@ -14,8 +14,8 @@ from policy.policy_loader import (
 from policy.trainer import BaseTrainer
 import torch
 import numpy
+torch.serialization.add_safe_globals([numpy.ndarray])
 torch.serialization.add_safe_globals([numpy.core.multiarray._reconstruct])
-torch.serialization.safe_globals([numpy.core.multiarray._reconstruct])
 
 def parse_param():
     """
@@ -83,6 +83,7 @@ def main(args):
         None. The trained model and statistics are saved to the output directory
         specified in training_args.
     """
+    args.is_training = True
     set_seed(1)
     
     # Load all configurations in one place
