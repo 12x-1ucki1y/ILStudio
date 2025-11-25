@@ -45,6 +45,17 @@ def load_policy(args):
                 args.is_training = False
             model_components = load_model_from_checkpoint(args.model_name_or_path, args)
             model = model_components['model']
+            
+            # 🛠️ 关键修复：在这里也创建 MetaPolicy
+            policy = MetaPolicy(
+                policy=model, 
+                chunk_size=getattr(args, 'chunk_size', None), 
+                action_normalizer=normalizers['action'], 
+                state_normalizer=normalizers['state'], 
+                ctrl_space=ctrl_space, 
+                ctrl_type=ctrl_type,
+                img_size=getattr(args, 'image_size', None)
+            )
         else:
             from policy.direct_loader import load_model_from_checkpoint
             model_components = load_model_from_checkpoint(args.model_name_or_path, args)
@@ -59,7 +70,7 @@ def load_policy(args):
                 state_normalizer=normalizers['state'], 
                 ctrl_space=ctrl_space, 
                 ctrl_type=ctrl_type,
-                img_size = getattr(args, 'image_size', None)
+                img_size=getattr(args, 'image_size', None)
             )
     return policy
 
