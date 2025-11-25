@@ -2,17 +2,17 @@ name: sim_transfer_cube_scripted
 
 # 数据集列表
 datasets:
-  - type: data_utils.datasets.AlohaSimDataset
-    name: sim_transfer_cube_scripted
-    args:
-      dataset_path_list:
-        - data/sim_transfer_cube_scripted
-      camera_names:
-        - primary
-      chunk_size: 50
-      ctrl_space: joint
-      ctrl_type: abs
-      preload_data: true
+- type: data_utils.datasets.AlohaSimDataset
+  name: sim_transfer_cube_scripted
+  args:
+    dataset_path_list:
+    - data/sim_transfer_cube_scripted
+    camera_names:
+    - primary
+    chunk_size: 50
+    ctrl_space: joint
+    ctrl_type: abs
+    preload_data: true
 
 # Task metadata
 meta:

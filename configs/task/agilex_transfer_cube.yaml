@@ -15,8 +15,8 @@ datasets:
 
 # Task metadata (这些参数会被展平到顶层供代码使用)
 meta:
-  action_dim: 14
-  state_dim: 14
-  image_size: [640, 480]
+action_dim: 14
+state_dim: 14
+image_size: [640, 480]
   action_normalize: zscore
   state_normalize: zscore

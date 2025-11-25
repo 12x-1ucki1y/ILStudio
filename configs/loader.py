@@ -20,7 +20,7 @@ class ConfigLoader:
             self._overrides = self.unknown_args
         else:
             self._overrides = parse_overrides(self.unknown_args or [])
-    
+
     @staticmethod
     def normalize_config(cfg: Dict[str, Any]) -> Dict[str, Any]:
         """

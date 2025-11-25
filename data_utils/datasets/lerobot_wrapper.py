@@ -11,7 +11,7 @@ except ImportError:
     from lerobot.common.datasets.lerobot_dataset import LeRobotDataset, LeRobotDatasetMetadata
 import numpy as np
 import warnings
-from benchmark.utils import resize_with_pad
+# from benchmark.utils import resize_with_pad
 
 class WrappedLerobotDataset(tud.Dataset):
     def __init__(self, 

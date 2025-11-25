@@ -49,18 +49,18 @@ def load_policy(args):
             from policy.direct_loader import load_model_from_checkpoint
             model_components = load_model_from_checkpoint(args.model_name_or_path, args)
             model = model_components['model']
-        config = model_components.get('config', None)
-        if config:
-            print(f"Loaded config from checkpoint: {type(config).__name__}")
-        policy = MetaPolicy(
-            policy=model, 
-            chunk_size=getattr(args, 'chunk_size', None), 
-            action_normalizer=normalizers['action'], 
-            state_normalizer=normalizers['state'], 
-            ctrl_space=ctrl_space, 
-            ctrl_type=ctrl_type,
-            img_size = getattr(args, 'image_size', None)
-        )
+            config = model_components.get('config', None)
+            if config:
+                print(f"Loaded config from checkpoint: {type(config).__name__}")
+            policy = MetaPolicy(
+                policy=model, 
+                chunk_size=getattr(args, 'chunk_size', None), 
+                action_normalizer=normalizers['action'], 
+                state_normalizer=normalizers['state'], 
+                ctrl_space=ctrl_space, 
+                ctrl_type=ctrl_type,
+                img_size = getattr(args, 'image_size', None)
+            )
     return policy
 
 def print_model_trainable_information(model, rank0_print=None):

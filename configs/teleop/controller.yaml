@@ -7,4 +7,4 @@ args:
   shm_name: ilstd_teleop_controller  # Default shared memory name
   action_dim: 7                       # Dimensionality of the action space
   action_dtype: float64               # Numpy dtype used for action values
-  freq: 10.0                          # Teleoperation update frequency in Hz
+freq: 10.0                          # Teleoperation update frequency in Hz

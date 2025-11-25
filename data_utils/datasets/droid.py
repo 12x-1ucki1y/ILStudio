@@ -23,6 +23,7 @@ import numpy as np
 import json
 from pathlib import Path
 import logging
+import warnings
 
 class DroidDataset:
     def __init__(
@@ -292,7 +293,21 @@ class DroidDataset:
         for data in self.dataset.as_numpy_iterator():
             data['raw_lang'] = data['raw_lang'].decode('utf-8')
             data['episode_id'] = data['episode_id'].decode('utf-8')
-            data['image'] = torch.einsum('k h w c -> k c h w', torch.from_numpy(data['image']))
+            
+            # Convert image to torch tensor and ensure uint8 format
+            image_np = data['image']
+            # Safety check: ensure images are uint8 with values in [0, 255]
+            if image_np.dtype != np.uint8:
+                warnings.warn(f"DROID image dtype is {image_np.dtype}, converting to uint8. This should not happen.")
+                if image_np.dtype in [np.float32, np.float64, np.float16]:
+                    if image_np.max() <= 1.0:
+                        image_np = (image_np * 255).clip(0, 255).astype(np.uint8)
+                    else:
+                        image_np = image_np.clip(0, 255).astype(np.uint8)
+                else:
+                    image_np = image_np.clip(0, 255).astype(np.uint8)
+            
+            data['image'] = torch.einsum('k h w c -> k c h w', torch.from_numpy(image_np))
             data['state'] = torch.from_numpy(data['state']).float()
             data['action'] = torch.from_numpy(data['action']).float()
             data['is_pad'] = torch.from_numpy(data['is_pad']).bool()
