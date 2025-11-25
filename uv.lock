@@ -894,12 +894,15 @@ dependencies = [
     { name = "imageio-ffmpeg" },
     { name = "lerobot" },
     { name = "matplotlib" },
+    { name = "mesa" },
     { name = "mujoco" },
     { name = "numpy" },
     { name = "opencv-python" },
     { name = "peft" },
     { name = "pillow" },
     { name = "pynput" },
+    { name = "pyopengl" },
+    { name = "pyopengl-accelerate" },
     { name = "pytest" },
     { name = "rich" },
     { name = "robosuite" },
@@ -929,12 +932,15 @@ requires-dist = [
     { name = "imageio-ffmpeg", specifier = "==0.6.0" },
     { name = "lerobot" },
     { name = "matplotlib" },
+    { name = "mesa", specifier = ">=3.0.3" },
     { name = "mujoco", specifier = "==2.3.7" },
     { name = "numpy", specifier = "==1.26.4" },
     { name = "opencv-python", specifier = ">=4.9.0.80" },
     { name = "peft", specifier = ">=0.17.1" },
     { name = "pillow", specifier = ">=11.3.0" },
     { name = "pynput" },
+    { name = "pyopengl", specifier = ">=3.1.10" },
+    { name = "pyopengl-accelerate", specifier = ">=3.1.10" },
     { name = "pytest" },
     { name = "rich" },
     { name = "robosuite", specifier = "==1.4.0" },
@@ -1301,6 +1307,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/3a/41/580bb4006e3ed0361b8151a01d324fb03f420815446c7def45d02f74c270/mergedeep-1.3.4.tar.gz", hash = "sha256:0096d52e9dad9939c3d975a774666af186eda617e6ca84df4c94dec30004f2a8", size = 4661, upload-time = "2021-02-05T18:55:30.623Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2c/19/04f9b178c2d8a15b076c8b5140708fa6ffc5601fb6f1e975537072df5b2a/mergedeep-1.3.4-py3-none-any.whl", hash = "sha256:70775750742b25c0d8f36c55aed03d24c3384d17c951b3175d898bd778ef0307", size = 6354, upload-time = "2021-02-05T18:55:29.583Z" },
+]
+
+[[package]]
+name = "mesa"
+version = "3.0.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e8/c5/503587ed764ac896cea5e215bb8d8ed4e988d9edb735b16c540e3c40ad47/mesa-3.0.3.tar.gz", hash = "sha256:fb46e4f834c2fe3cf69286325354f7d0681edc310b373054f0c6403c6b992e90", size = 2528545, upload-time = "2024-11-13T23:30:38.652Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/81/fd/a2866480e81ecd458342c29a1a07061418aa16314bb81db41600a29bfabb/mesa-3.0.3-py3-none-any.whl", hash = "sha256:5607a2e9e8bb91f6f68e949d84411d1444ae002b353005cfb66023e3e8319050", size = 226484, upload-time = "2024-11-13T23:30:36.297Z" },
 ]
 
 [[package]]
@@ -2015,6 +2035,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6f/16/912b7225d56284859cd9a672827f18be43f8012f8b7b932bc4bd959a298e/pyopengl-3.1.10.tar.gz", hash = "sha256:c4a02d6866b54eb119c8e9b3fb04fa835a95ab802dd96607ab4cdb0012df8335", size = 1915580, upload-time = "2025-08-18T02:33:01.76Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/de/e4/1ba6f44e491c4eece978685230dde56b14d51a0365bc1b774ddaa94d14cd/pyopengl-3.1.10-py3-none-any.whl", hash = "sha256:794a943daced39300879e4e47bd94525280685f42dbb5a998d336cfff151d74f", size = 3194996, upload-time = "2025-08-18T02:32:59.902Z" },
+]
+
+[[package]]
+name = "pyopengl-accelerate"
+version = "3.1.10"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6d/49/dffa946f07e84eb4666d7fb5553a1d569d54405c863ff7a19b71758712f6/pyopengl_accelerate-3.1.10.tar.gz", hash = "sha256:82751c83f0a6f732b8b5923990edc2441d38176a98756b1718e8d6c4379f5a71", size = 21930, upload-time = "2025-08-18T02:34:06.752Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/3d/9441102793ae06f5e4fe6b2cec573f53d247e21c044e90debd8d458bba76/pyopengl_accelerate-3.1.10-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:799b7ff0b2beaac92ec89e342147ae5f6b4e30acc60d124a48dec3fb2ee6c365", size = 423489, upload-time = "2025-08-18T02:33:09.57Z" },
+    { url = "https://files.pythonhosted.org/packages/36/5b/f8a5d33864025223f27f7c990b01a9bca046da4d810e3860008901e07fb5/pyopengl_accelerate-3.1.10-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:448f1a7f31090b029ca9a4623ebe9bffa5497a579ae1f05aff2aa3c362ca1eb0", size = 2953237, upload-time = "2025-08-18T02:33:10.904Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/dc/d6fd8223eefc3317ef44f2575a1756c280727cd5e6a236cab19d1cdef1ef/pyopengl_accelerate-3.1.10-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:4ee27dd972c0c633d09a76f35997ee7c3adf36ed13d78710d859245a4f968dc5", size = 2833895, upload-time = "2025-08-18T02:33:12.39Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/3f/a348cb162a2d26953733f6833f2c783ffb38681bcad9521383d8d2964d67/pyopengl_accelerate-3.1.10-cp310-cp310-win32.whl", hash = "sha256:849e1d884ebb83ca016e7e0d8c336090a6236b91b8f1ad17258b31a49e0bd390", size = 332827, upload-time = "2025-08-18T02:33:14.165Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/b7/1dd95f9e1a39c7b845b1198733317e2c31f2b464fdf5477e74e7fe24b981/pyopengl_accelerate-3.1.10-cp310-cp310-win_amd64.whl", hash = "sha256:d0a6129fe40c32b0ffdaa7386e80e8baae1a3312ac8bc7dc27436146938d5a94", size = 388043, upload-time = "2025-08-18T02:33:15.593Z" },
 ]
 
 [[package]]

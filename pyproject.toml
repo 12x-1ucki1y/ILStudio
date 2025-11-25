@@ -41,6 +41,9 @@ dependencies = [
     "timm>=0.9.10",
     "draccus",
     "tensorflow_graphics",
+    "pyopengl>=3.1.10",
+    "pyopengl-accelerate>=3.1.10",
+    "mesa>=3.0.3",
 ]
 
 
