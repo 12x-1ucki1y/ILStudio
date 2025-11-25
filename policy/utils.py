@@ -46,7 +46,6 @@ def load_policy(args):
             model_components = load_model_from_checkpoint(args.model_name_or_path, args)
             model = model_components['model']
             
-            # 🛠️ 关键修复：在这里也创建 MetaPolicy
             policy = MetaPolicy(
                 policy=model, 
                 chunk_size=getattr(args, 'chunk_size', None), 
