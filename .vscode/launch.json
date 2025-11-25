@@ -21,8 +21,14 @@
                 // "TRANSFORMERS_CACHE": "/inspire/hdd/project/robot-action/public/models",
             },
             "args": [
-                "-p", "pi0_mw", "-t", "lerobot_metaworld", "-o", "ckpt/pi0_mw", "-c", "openpi_full"
+                "-p", "smolvla_mw", "-t", "lerobot_metaworld", "-o", "ckpt/smolvla_mw1124", "-c", "smolvla"
             ],
+            // "args": [
+            //     "-e", "libero_object_0", "-o", "results/smolvla_liberoobj_primary_0"
+            // ],
+            // "args": [
+            //     "-p", "pi0_mw", "-t", "lerobot_metaworld", "-o", "ckpt/pi0_mw", "-c", "openpi_full"
+            // ],
             // "args": [//robomimic+act
             //     "-p", "pi0_aloha", "-t", "sim_transfer_cube_scripted", "-o", "ckpt/pi0_aloha_1122", "-c", "openpi_full"
             // ],

@@ -1,9 +1,9 @@
+import os
 import threading
 import time
 import numpy as np
 import itertools
 import torch
-import os
 import fnmatch
 import queue
 import json
@@ -16,14 +16,6 @@ from torch.utils.data import DataLoader, Sampler
 from torch.utils.data import DataLoader, ConcatDataset
 from torch.utils.data.distributed import DistributedSampler
 from .dataset_wrappers import WrappedDataset, WrappedIterableDataset, MapToIterableDataset
-try:
-    from torchdata.datapipes.iter import IterableWrapper, Cycler, ShardingFilter, Shuffler, Batcher, Prefetcher, Multiplexer, SampleMultiplexer
-    TORCHDATA_AVAILABLE = True
-except ImportError:
-    TORCHDATA_AVAILABLE = False
-    warnings.warn("torchdata not available. Multi-dataset mixing will not be supported.")
-# import logging
-# logger = logging.getLogger(__name__)
 
 def is_distributed():
     return dist.is_available() and dist.is_initialized() and dist.get_world_size() > 1
@@ -273,7 +265,6 @@ def get_dataloader(train_dataset, val_dataset=None, processor=None, collator=Non
     if isinstance(train_dataset, list):
         # Multiple datasets - use torchdata for mixing
         
-        print(f"Using mixed dataset pipeline with {len(train_dataset)} datasets")
         train_loader = _create_mixed_dataloader(train_dataset, processor, collator, args)
         
         # Handle validation dataset
@@ -307,9 +298,6 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
         sampler = DistributedSampler(wrapped_data) if is_training and is_distributed() else None
         persistent_workers = getattr(args, 'dataloader_persistent_workers', False) if args.dataloader_num_workers>0 else False
         prefetch_factor = getattr(args, 'dataloader_prefetch_factor', 2) if args.dataloader_num_workers>0 else None
-        print("Persistent workers: ", persistent_workers)
-        print("Prefetch_factor:", prefetch_factor)
-        print("Pin Memory:", args.dataloader_pin_memory)
         loader = DataLoader(
             wrapped_data,
             batch_size=args.per_device_train_batch_size,
@@ -343,6 +331,14 @@ def _create_single_dataloader(dataset, processor, collator, args, is_training=Tr
         else:
             # Pytorch Iterable dataset
             # Wrap iterable dataset with processor
+            try:
+                from torchdata.datapipes.iter import IterableWrapper
+            except ImportError:
+                raise ImportError(
+                    "torchdata is required for iterable dataset support. "
+                    "Install it with: pip install torchdata"
+                )
+            
             wrapped_data = WrappedIterableDataset(dataset, processor)
             pipe = IterableWrapper(wrapped_data, deepcopy=False)
             # For iterable datasets, we cannot use DistributedSampler

@@ -23,4 +23,4 @@ num2words/
 .venv/
 uv.lock
 configs/policy/*gc*
-configs/action_manager/so101*
+configs/action_manager/so101*__pycache__/

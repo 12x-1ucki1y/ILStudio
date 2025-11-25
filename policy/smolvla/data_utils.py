@@ -16,9 +16,7 @@ class SmolVLAProcess:
         #     padding_side=self.padding_side,
         #     return_tensors="pt",
         # )
-        if isinstance(sample['image'], np.ndarray):
-            image_data = sample['image'].astype(np.float32) / 255.0 # k,c,h,w
-        else:
+        if sample['image'].max()>1.0:
             image_data = sample['image'] / 255.0 # k,c,h,w
         # organize data
         data_dict = {}
