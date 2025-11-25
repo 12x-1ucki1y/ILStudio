@@ -1,17 +1,23 @@
+name: sim_transfer_cube_scripted
+
+# 数据集列表
 datasets:
-  - name: "sim_transfer_cube_scripted"
-    class: "AlohaSimDataset"
+  - type: data_utils.datasets.AlohaSimDataset
+    name: sim_transfer_cube_scripted
     args:
-      dataset_path_list: ['data/sim_transfer_cube_scripted']
-      camera_names: ['primary']
+      dataset_path_list:
+        - data/sim_transfer_cube_scripted
+      camera_names:
+        - primary
       chunk_size: 50
-      ctrl_space: 'joint'
-      ctrl_type: 'abs'
+      ctrl_space: joint
+      ctrl_type: abs
       preload_data: true
 
-action_dim: 14
-state_dim: 14
-image_size: [640, 480]
-action_normalize: "zscore"
-state_normalize: "zscore"
-episode_len: 400
+# Task metadata
+meta:
+  action_dim: 14
+  state_dim: 14
+  image_size: [640, 480]
+  action_normalize: zscore
+  state_normalize: zscore

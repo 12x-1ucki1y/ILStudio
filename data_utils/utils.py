@@ -273,8 +273,8 @@ def _create_dataset_from_config(dataset_config: dict, args):
     Returns:
         Dataset instance with added 'name' and 'dataset_id' attributes
     """
-    # Get dataset class
-    class_path = dataset_config.get('class', dataset_config.get('dataset_class', 'EpisodicDataset'))
+    # Get dataset class - support both new 'type' and old 'class' fields
+    class_path = dataset_config.get('type') or dataset_config.get('class') or dataset_config.get('dataset_class', 'EpisodicDataset')
     dataset_class = _import_class_from_path(class_path)
     
     # Extract dataset name from config (required for identification)

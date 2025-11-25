@@ -29,17 +29,28 @@ class PolicyConfig:
     
     @classmethod
     def from_yaml(cls, yaml_path: str) -> 'PolicyConfig':
-        """Load policy configuration from YAML file."""
+        """Load policy configuration from YAML file.
+        Supports both old and new unified formats.
+        """
         with open(yaml_path, 'r') as f:
             config_data = yaml.safe_load(f)
         
+        # Handle new unified format
+        name = config_data.get('name')
+        
+        # Extract module_path from either 'type' or 'module_path'
+        module_path = config_data.get('type') or config_data.get('module_path')
+        
+        # Extract model_args from either 'args' or 'model_args'
+        model_args = config_data.get('args') or config_data.get('model_args', {})
+        
         return cls(
-            name=config_data['name'],
-            module_path=config_data['module_path'],
+            name=name,
+            module_path=module_path,
             config_class=config_data.get('config_class'),
             model_class=config_data.get('model_class'),
             pretrained_config=config_data.get('pretrained_config'),
-            model_args=config_data.get('model_args', {}),
+            model_args=model_args,
             config_params=config_data.get('config_params', {}),
             data_processor=config_data.get('data_processor'),
             data_collator=config_data.get('data_collator'),
